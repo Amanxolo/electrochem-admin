@@ -11,7 +11,7 @@ import { Badge } from "@/components/ui/badge"
 import { Plus, Edit3, Trash2, Package, Zap, Save, X } from "lucide-react"
 import { trpc } from "@/utils/trpc"; // adjust based on your actual path
 import Image from "next/image";
-import {  toast } from "sonner"; // sonner toasts
+import { toast } from "sonner"; // sonner toasts
 
 interface Product {
   id: string // Use string for MongoDB ObjectId or number for a simple ID
@@ -26,13 +26,14 @@ interface Product {
 
 export default function AdminPanel() {
   const [animationStage, setAnimationStage] = useState(0)
-  // const { mutate: addProduct } = trpc.product.addProduct.useMutation();
+  const { mutate: addProduct } = trpc.product.addProduct.useMutation();
   const { mutate: updateProduct } = trpc.product.updateProduct.useMutation();
   const { mutate: deleteProduct } = trpc.product.deleteProduct.useMutation();
   const { data: fetchedProducts } = trpc.product.getAll.useQuery();
+  const utils = trpc.useUtils();
 
   const [products, setProducts] = useState<Product[]>([]);
-  
+
   useEffect(() => {
     if (fetchedProducts) {
       const transformed = fetchedProducts.map((prod) => ({
@@ -41,7 +42,7 @@ export default function AdminPanel() {
         category: prod.productCategory,
         price: prod.price,
         description: prod.prodSpecs || "",
-        stock: 0, // backend doesn’t return stock, so default it
+        stock: prod.stock ?? 0,
         image: prod.image?.[0] || "/placeholder.svg?height=200&width=200",
         minQuantity: prod.minQuantity,
       }));
@@ -68,6 +69,19 @@ export default function AdminPanel() {
   const [editingImageFile, setEditingImageFile] = useState<File | null>(null)
   const [editingPreviewUrl, setEditingPreviewUrl] = useState<string | null>(null)
 
+  // Search states for update and delete tabs
+  const [updateSearchQuery, setUpdateSearchQuery] = useState("")
+  const [deleteSearchQuery, setDeleteSearchQuery] = useState("")
+
+  // Filter products based on search queries
+  const filteredProductsForUpdate = products.filter((product) =>
+    product.name.toLowerCase().includes(updateSearchQuery.toLowerCase())
+  )
+  const filteredProductsForDelete = products.filter((product) =>
+    product.name.toLowerCase().includes(deleteSearchQuery.toLowerCase())
+  )
+
+
   useEffect(() => {
     const timers = [
       setTimeout(() => setAnimationStage(1), 800), // Curtain opens
@@ -90,6 +104,7 @@ export default function AdminPanel() {
         formData.append("price", newProduct.price.toString());
         formData.append("prodSpecs", newProduct.description);
         formData.append("minQuantity", "1");
+        formData.append("stock", (Number(newProduct.stock) || 0).toString());
 
         // send arrays as JSON strings
         formData.append("voltageRatings", JSON.stringify([]));
@@ -107,9 +122,10 @@ export default function AdminPanel() {
           throw new Error(data.error || "Upload failed");
         }
 
-        console.log("Product added:", data.product);
+        
 
         toast.success("Product added and image uploaded");
+        utils.product.getAll.invalidate(); // Refresh products list
 
         // reset state
         setNewProduct({
@@ -162,18 +178,17 @@ export default function AdminPanel() {
         });
 
         // Try to parse JSON, otherwise fallback to text
-         let uploadData: { product?: { image?: string | string[] }; image?: string | string[]; path?: string; error?: string; message?: string; raw?: string } | null = null;
+        let uploadData: { product?: { image?: string | string[] }; image?: string | string[]; path?: string; error?: string; message?: string; raw?: string } | null = null;
         const ct = uploadRes.headers.get("content-type") || "";
         if (ct.includes("application/json")) {
           try { uploadData = await uploadRes.json(); }
-          catch (e) { uploadData = { raw: await uploadRes.text() }; }
+          catch { uploadData = { raw: await uploadRes.text() }; }
         } else {
           uploadData = { raw: await uploadRes.text() };
         }
 
         // Always log the response details for debugging
-        console.log("Upload response status:", uploadRes.status, uploadRes.statusText);
-        console.log("Upload response body:", uploadData);
+        
 
         if (!uploadRes.ok) {
           // Show friendly toast with server-provided message if present
@@ -215,18 +230,19 @@ export default function AdminPanel() {
       updateProduct(
         {
           id: editingProduct.id.toString(),
-          updates: {
-            productName: editingProduct.name,
-            productCategory: editingProduct.category,
-            price: editingProduct.price,
-            prodSpecs: editingProduct.description,
-            minQuantity: editingProduct.minQuantity,
-            image: imageArray,
-          },
+           updates: {
+             productName: editingProduct.name,
+             productCategory: editingProduct.category,
+             price: editingProduct.price,
+             prodSpecs: editingProduct.description,
+             minQuantity: editingProduct.minQuantity,
+             stock: editingProduct.stock,
+             image: imageArray,
+           },
         },
         {
           onSuccess: () => {
-            console.log("Product updated");
+            utils.product.getAll.invalidate(); // Refresh products list
             toast.success("Product updated");
           },
           onError: (err: unknown) => {
@@ -261,7 +277,7 @@ export default function AdminPanel() {
       { id: id.toString() },
       {
         onSuccess: () => {
-          console.log("Product deleted");
+          utils.product.getAll.invalidate(); // Refresh products list
           toast.success("Product deleted");
         },
         onError: (err: unknown) => {
@@ -735,9 +751,9 @@ export default function AdminPanel() {
 
                             {/* Category Select */}
                             <Select
-                              value={newProduct.category}
+                              value={editingProduct.category}
                               onValueChange={(value) =>
-                                setNewProduct({ ...newProduct, category: value })
+                                setEditingProduct({ ...editingProduct, category: value })
                               }
                             >
                               <SelectTrigger className="bg-black/50 border-gray-700/50 text-white focus:border-green-400 focus:ring-green-400/20 h-12 rounded-xl">
@@ -900,30 +916,50 @@ export default function AdminPanel() {
                       </CardDescription>
                     </CardHeader>
                     <CardContent className="p-8">
+                      {/* Search Bar for Update Tab */}
+                      <div className="mb-6">
+                        <Input
+                          placeholder="Search products by name..."
+                          value={updateSearchQuery}
+                          onChange={(e) => setUpdateSearchQuery(e.target.value)}
+                          className="bg-black/50 border-gray-700/50 text-white placeholder:text-gray-500 focus:border-green-400 focus:ring-green-400/20 h-12 rounded-xl"
+                        />
+                      </div>
                       <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
-                        {products.map((product) => (
-                          <div
-                            key={product.id}
-                            className="p-6 bg-black/30 rounded-xl border border-gray-800/50 hover:border-green-400/50 transition-all duration-300 cursor-pointer hover:shadow-lg hover:shadow-green-500/10 group"
-                            onClick={() => startEditing(product)}
-                          >
-                            <div className="flex items-center gap-4 mb-4">
-                              <div className="p-3 bg-gray-800/50 rounded-lg group-hover:bg-green-500/20 transition-colors duration-300">
-                                <Package className="h-6 w-6 text-green-400" />
+                        {filteredProductsForUpdate.length > 0 ? (
+                          filteredProductsForUpdate.map((product) => (
+                            <div
+                              key={product.id}
+                              className="p-6 bg-black/30 rounded-xl border border-gray-800/50 hover:border-green-400/50 transition-all duration-300 cursor-pointer hover:shadow-lg hover:shadow-green-500/10 group"
+                              onClick={() => startEditing(product)}
+                            >
+                              <div className="flex items-center gap-4 mb-4">
+                                <div className="p-3 bg-gray-800/50 rounded-lg group-hover:bg-green-500/20 transition-colors duration-300">
+                                  <Package className="h-6 w-6 text-green-400" />
+                                </div>
+                                <h3 className="font-semibold text-white truncate text-lg">{product.name}</h3>
                               </div>
-                              <h3 className="font-semibold text-white truncate text-lg">{product.name}</h3>
+                              <div className="flex items-center justify-between">
+                                <Badge
+                                  variant="secondary"
+                                  className="bg-gray-800/50 text-gray-300 border-gray-700/50 px-3 py-1"
+                                >
+                                  {product.category}
+                                </Badge>
+                                <span className="text-green-400 font-bold text-lg">${product.price}</span>
+                              </div>
                             </div>
-                            <div className="flex items-center justify-between">
-                              <Badge
-                                variant="secondary"
-                                className="bg-gray-800/50 text-gray-300 border-gray-700/50 px-3 py-1"
-                              >
-                                {product.category}
-                              </Badge>
-                              <span className="text-green-400 font-bold text-lg">${product.price}</span>
+                          ))
+                        ) : (
+                          <div className="col-span-full text-center py-12">
+                            <div className="w-20 h-20 bg-gray-800/50 rounded-full flex items-center justify-center mx-auto mb-6">
+                              <Package className="h-10 w-10 text-gray-600" />
                             </div>
+                            <p className="text-gray-400 text-lg">
+                              {updateSearchQuery ? `No products found matching "${updateSearchQuery}"` : "No products available to update"}
+                            </p>
                           </div>
-                        ))}
+                        )}
                       </div>
                     </CardContent>
                   </Card>
@@ -946,41 +982,53 @@ export default function AdminPanel() {
                   </CardDescription>
                 </CardHeader>
                 <CardContent className="p-8">
+                  {/* Search Bar for Delete Tab */}
+                  <div className="mb-6">
+                    <Input
+                      placeholder="Search products by name..."
+                      value={deleteSearchQuery}
+                      onChange={(e) => setDeleteSearchQuery(e.target.value)}
+                      className="bg-black/50 border-gray-700/50 text-white placeholder:text-gray-500 focus:border-green-400 focus:ring-green-400/20 h-12 rounded-xl"
+                    />
+                  </div>
                   <div className="space-y-6">
-                    {products.map((product) => (
-                      <div
-                        key={product.id}
-                        className="flex items-center justify-between p-6 bg-black/30 rounded-xl border border-gray-800/50 hover:border-red-400/50 transition-all duration-300 group"
-                      >
-                        <div className="flex items-center gap-6">
-                          <div className="w-16 h-16 bg-gray-800/50 rounded-xl flex items-center justify-center group-hover:bg-red-500/20 transition-colors duration-300">
-                            <Package className="h-8 w-8 text-gray-400 group-hover:text-red-400 transition-colors duration-300" />
-                          </div>
-                          <div>
-                            <h3 className="font-semibold text-white text-lg mb-1">{product.name}</h3>
-                            <div className="flex items-center gap-6 text-gray-400">
-                              <span className="text-sm">{product.category}</span>
-                              <span className="text-sm font-medium">${product.price}</span>
-                              <span className="text-sm">Stock: {product.stock}</span>
+                    {filteredProductsForDelete.length > 0 ? (
+                      filteredProductsForDelete.map((product) => (
+                        <div
+                          key={product.id}
+                          className="flex items-center justify-between p-6 bg-black/30 rounded-xl border border-gray-800/50 hover:border-red-400/50 transition-all duration-300 group"
+                        >
+                          <div className="flex items-center gap-6">
+                            <div className="w-16 h-16 bg-gray-800/50 rounded-xl flex items-center justify-center group-hover:bg-red-500/20 transition-colors duration-300">
+                              <Package className="h-8 w-8 text-gray-400 group-hover:text-red-400 transition-colors duration-300" />
+                            </div>
+                            <div>
+                              <h3 className="font-semibold text-white text-lg mb-1">{product.name}</h3>
+                              <div className="flex items-center gap-6 text-gray-400">
+                                <span className="text-sm">{product.category}</span>
+                                <span className="text-sm font-medium">${product.price}</span>
+                                <span className="text-sm">Stock: {product.stock}</span>
+                              </div>
                             </div>
                           </div>
+                          <Button
+                            onClick={() => handleDeleteProduct(product.id)}
+                            variant="destructive"
+                            className="bg-red-600 hover:bg-red-700 transition-all duration-300 hover:shadow-lg hover:shadow-red-500/25 px-6 py-3 rounded-xl font-semibold"
+                          >
+                            <Trash2 className="h-5 w-5 mr-2" />
+                            Delete
+                          </Button>
                         </div>
-                        <Button
-                          onClick={() => handleDeleteProduct(product.id)}
-                          variant="destructive"
-                          className="bg-red-600 hover:bg-red-700 transition-all duration-300 hover:shadow-lg hover:shadow-red-500/25 px-6 py-3 rounded-xl font-semibold"
-                        >
-                          <Trash2 className="h-5 w-5 mr-2" />
-                          Delete
-                        </Button>
-                      </div>
-                    ))}
-                    {products.length === 0 && (
+                      ))
+                    ) : (
                       <div className="text-center py-16">
                         <div className="w-20 h-20 bg-gray-800/50 rounded-full flex items-center justify-center mx-auto mb-6">
                           <Package className="h-10 w-10 text-gray-600" />
                         </div>
-                        <p className="text-gray-400 text-lg">No products available to delete</p>
+                        <p className="text-gray-400 text-lg">
+                          {deleteSearchQuery ? `No products found matching "${deleteSearchQuery}"` : "No products available to delete"}
+                        </p>
                       </div>
                     )}
                   </div>

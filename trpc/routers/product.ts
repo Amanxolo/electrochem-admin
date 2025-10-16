@@ -59,6 +59,7 @@ export const productRouter = t.router({
           productCategory: z.string().optional(),
           price: z.number().optional(),
           prodSpecs: z.string().optional(),
+          stock: z.number().optional(),
           minQuantity: z.number().optional(),
           image: z.array(z.string()).optional(),
           voltageRatings: z.array(z.string()).optional(),
