@@ -27,6 +27,7 @@ export const productRouter = t.router({
         productName: z.string(),
         productCategory: z.string(),
         price: z.number(),
+        stock:z.number().default(0),
         prodSpecs: z.string().optional(),
         minQuantity: z.number().default(1),
         image: z.array(z.string()).default(["/placeholder.svg"]),

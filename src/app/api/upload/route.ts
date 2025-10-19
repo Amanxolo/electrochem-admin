@@ -79,7 +79,7 @@ export async function POST(req: NextRequest) {
     const price = Number(formData.get("price") ?? 0);
     const prodSpecs = (formData.get("prodSpecs") as string) || undefined;
     const minQuantity = Number(formData.get("minQuantity") ?? 1);
-
+    const stock=Number(formData.get("stock") ?? 0);
     const voltageRatings = formData.get("voltageRatings")
       ? JSON.parse(formData.get("voltageRatings") as string)
       : [];
@@ -100,6 +100,7 @@ export async function POST(req: NextRequest) {
       price,
       prodSpecs,
       minQuantity,
+      stock,
       image: [fileUrl!],
       voltageRatings,
       ahRatings,

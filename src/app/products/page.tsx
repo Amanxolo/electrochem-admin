@@ -35,6 +35,7 @@ export default function AdminPanel() {
   const [products, setProducts] = useState<Product[]>([]);
 
   useEffect(() => {
+    console.log(fetchedProducts)
     if (fetchedProducts) {
       const transformed = fetchedProducts.map((prod) => ({
         id: String(prod._id), // or use prod._id if you want
@@ -42,7 +43,7 @@ export default function AdminPanel() {
         category: prod.productCategory,
         price: prod.price,
         description: prod.prodSpecs || "",
-        stock: prod.stock ?? 0,
+        stock: prod.stock,
         image: prod.image?.[0] || "/placeholder.svg?height=200&width=200",
         minQuantity: prod.minQuantity,
       }));
