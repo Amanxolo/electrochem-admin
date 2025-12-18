@@ -7,9 +7,50 @@ import {
   UserPlus,
   TrendingUp,
   TrendingDown,
+ 
+  BellDotIcon
+  
 } from "lucide-react";
-import { useEffect, useState } from "react";
+import { Button } from "@/components/ui/button";
+import { useEffect, useState ,useCallback} from "react";
+import { toast } from "sonner";
+import { get } from "http";
 
+function HeaderCartButton() {
+  
+  const [totalCount,setTotalCount]=useState<number>(0)
+  
+  const getNewComplaintsCount=useCallback(async()=>{
+
+    const res=await fetch('/api/complaints?query=getNewOrdersCount')
+    if(!res.ok){
+      toast.error("Error in ferching new complaints")
+      return
+    }
+    const data=await res.json();
+    // console.log(data)
+    setTotalCount(data.totalCount)
+  },[])
+  useEffect(()=>{
+    console.log("Calling use effect")
+    getNewComplaintsCount()
+  },[getNewComplaintsCount])
+  return (
+    
+    <Button size="sm" asChild className="relative">
+      <Link href="/cart" className="flex gap-2 sm:gap-2">
+        <BellDotIcon className="h-6 w-6" />
+        <span className="hidden xs:inline">Cart</span>
+        {totalCount > 0 && (
+          <span className="absolute -top-2 -right-2 bg-red-500 text-white text-xs rounded-full h-5 w-5 flex items-center justify-center">
+            {totalCount}
+          </span>
+        )}
+      </Link>
+    </Button>
+    
+  );
+}
 export default function Home() {
   const { token, logout } = useUserhook();
   const [totalUsers, setTotalUsers] = useState<number>(0);
@@ -52,11 +93,24 @@ export default function Home() {
         </div>
 
         <nav className="flex items-end gap-6 pr-5">
+          <HeaderCartButton/>
           <Link
             href="/products"
             className="text-sm font-medium hover:underline underline-offset-4"
           >
             Products
+          </Link>
+          <Link
+            href="/complaints"
+            className="text-sm font-medium hover:underline underline-offset-4"
+          >
+            Complaints
+          </Link>
+          <Link
+            href="/invoices"
+            className="text-sm font-medium hover:underline underline-offset-4"
+          >
+            Invoices
           </Link>
 
           <Link
