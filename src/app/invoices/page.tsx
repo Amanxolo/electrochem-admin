@@ -53,7 +53,7 @@ const InvoicePopup = () => {
 
             const numbers = numbersPart.split("&").map((num) => num.trim());
             numbers.forEach((num) => {
-              let trimmedNum = num.trim();
+              const trimmedNum = num.trim();
               extractedSerials.push(`${base} - ${trimmedNum}`);
             });
           });
