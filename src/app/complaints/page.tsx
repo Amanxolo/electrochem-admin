@@ -355,6 +355,8 @@ export default function ComplaintPage() {
   const [loading, setLoading] = useState<boolean>(false);
   const [serialNo, setserialNo] = useState<string>("");
   const [activeSearchSerial, setActiveSearchSerial] = useState<string>("");
+  const [emailSearch, setEmailSearch] = useState<string>("");
+  const [activeSearchEmail, setActiveSearchEmail] = useState<string>("");
   const [filterStatus, setFilterStatus] = useState<ComplaintStatus | "">("");
   const [filterPriority, setFilterPriority] = useState<ComplaintPriority | "">(
     ""
@@ -478,9 +480,10 @@ export default function ComplaintPage() {
           complaint.serialnumber
             .toLowerCase()
             .includes(activeSearchSerial.toLowerCase()));
-      return statusMatch && priorityMatch && serialMatch;
+      const emailMatch = activeSearchEmail === "" || (complaint.userId?.email && complaint.userId.email.toLowerCase().includes(activeSearchEmail.toLowerCase()));
+      return statusMatch && priorityMatch && serialMatch && emailMatch;
     });
-  }, [complaints, filterStatus, filterPriority, activeSearchSerial]);
+  }, [complaints, filterStatus, filterPriority, activeSearchSerial,activeSearchEmail]);
 
   return (
     <div className="min-h-screen bg-gray-50 p-6 sm:p-8">
@@ -522,6 +525,35 @@ export default function ComplaintPage() {
           />
         </div>
       </div>
+      <div className="flex flex-col sm:flex-row gap-4 mb-4">
+      <div className="flex-1 max-w-xs mb-2">
+        <input
+          type="text"
+          value={emailSearch}
+          className="border-1 bg-gray-50 text-black border-gray-300 px-2 py-1 placeholder-gray-500"
+          placeholder="Search by User Email."
+          onChange={(e) => setEmailSearch(e.target.value as string)}
+        />
+        <button
+          className="cursor-pointer mx-2 bg-green-600 text-white p-2 rounded-lg text-sm font-large hover:bg-green-700 transition duration-150"
+          onClick={() => {
+            setActiveSearchEmail(emailSearch);
+          }}
+        >
+          Search
+        </button>
+        {activeSearchEmail && (
+          <button
+            onClick={() => {
+              setEmailSearch("");
+              setActiveSearchEmail("");
+            }}
+            className="cursor-pointer ml-2 text-gray-500 hover:text-red-600 text-sm underline"
+          >
+            Clear
+          </button>
+        )}
+      </div>
       <div className="flex-1 max-w-xs mb-2">
         <input
           type="text"
@@ -550,7 +582,7 @@ export default function ComplaintPage() {
           </button>
         )}
       </div>
-
+      </div>
       {loading && (
         <p className="text-center text-lg text-indigo-600">
           Loading complaints...
