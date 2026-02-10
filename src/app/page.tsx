@@ -7,38 +7,35 @@ import {
   UserPlus,
   TrendingUp,
   TrendingDown,
- 
-  BellDotIcon
-  
+  BellDotIcon,
 } from "lucide-react";
+
 import { Button } from "@/components/ui/button";
-import { useEffect, useState ,useCallback} from "react";
+import { useEffect, useState, useCallback } from "react";
 import { toast } from "sonner";
-import { get } from "http";
+import { useRouter,usePathname } from "next/navigation";
+
 
 function HeaderCartButton() {
+  const [totalCount, setTotalCount] = useState<number>(0);
   
-  const [totalCount,setTotalCount]=useState<number>(0)
-  
-  const getNewComplaintsCount=useCallback(async()=>{
-
-    const res=await fetch('/api/complaints?query=getNewOrdersCount')
-    if(!res.ok){
-      toast.error("Error in ferching new complaints")
-      return
+  const getNewComplaintsCount = useCallback(async () => {
+    const res = await fetch("/api/complaints?query=getNewOrdersCount");
+    if (!res.ok) {
+      toast.error("Error in ferching new complaints");
+      return;
     }
-    const data=await res.json();
+    const data = await res.json();
     // console.log(data)
-    setTotalCount(data.totalCount)
-  },[])
-  useEffect(()=>{
-    console.log("Calling use effect")
-    getNewComplaintsCount()
-  },[getNewComplaintsCount])
+    setTotalCount(data.totalCount);
+  }, []);
+  useEffect(() => {
+    console.log("Calling use effect");
+    getNewComplaintsCount();
+  }, [getNewComplaintsCount]);
   return (
-    
     <Button size="sm" asChild className="relative">
-      <Link href="/cart" className="flex gap-2 sm:gap-2">
+      <Link href="/notifications" className="flex gap-2 sm:gap-2">
         <BellDotIcon className="h-6 w-6" />
         <span className="hidden xs:inline">Cart</span>
         {totalCount > 0 && (
@@ -48,7 +45,6 @@ function HeaderCartButton() {
         )}
       </Link>
     </Button>
-    
   );
 }
 export default function Home() {
@@ -56,7 +52,8 @@ export default function Home() {
   const [totalUsers, setTotalUsers] = useState<number>(0);
   const [newUsers, setNewUsers] = useState<number>(0);
   const [userGrowth, setUserGrowth] = useState<number>(0);
-
+  const router=useRouter();
+  const pathname=usePathname();
   useEffect(() => {
     const getAnalytics = async () => {
       const res = await fetch("/api/analytics", {
@@ -71,7 +68,6 @@ export default function Home() {
         let growth = 0;
         if (previousUser > 0) {
           growth = ((totalUsers - previousUser) / previousUser) * 100;
-          
         } else if (totalUsers > 0) {
           growth = 100;
         }
@@ -93,7 +89,7 @@ export default function Home() {
         </div>
 
         <nav className="flex items-end gap-6 pr-5">
-          <HeaderCartButton/>
+          <HeaderCartButton />
           <Link
             href="/products"
             className="text-sm font-medium hover:underline underline-offset-4"
@@ -112,7 +108,21 @@ export default function Home() {
           >
             Invoices
           </Link>
-
+          <div className="flex flex-col gap-1">
+            
+            <select
+              name="orders"
+              id="orders"
+              defaultValue={""}
+              // value={pathname}
+              onChange={(event)=>{router.push(event.target.value)}}
+              className=" border-none w-16 rounded bg-transparent text-sm outline-none focus:ring-2 focus:ring-green-500"
+            >
+              <option value="Orders">Orders</option>
+              <option value="/allorders">All Orders</option>
+              <option value="/orderverification">Bulk Orders</option>
+            </select>
+          </div>
           <Link
             href="signup"
             className="text-sm font-medium hover:underline underline-offset-4"
@@ -148,7 +158,6 @@ export default function Home() {
         </div>
 
         <div className="mt-10 flex flex-wrap gap-6 justify-center">
-          
           <div className="flex-1 min-w-[280px] max-w-sm p-6 bg-white border border-slate-200 rounded-xl shadow-lg transition-all duration-300 ease-in-out ">
             <div className="flex justify-between items-start">
               <div>
@@ -165,7 +174,6 @@ export default function Home() {
             </div>
           </div>
 
-          
           <div className="flex-1 min-w-[280px] max-w-sm p-6 bg-white border border-slate-200 rounded-xl shadow-lg transition-all duration-300 ease-in-out ">
             <div className="flex justify-between items-start">
               <div>
@@ -180,7 +188,6 @@ export default function Home() {
             </div>
           </div>
 
-          
           <div className="flex-1 min-w-[280px] max-w-sm p-6 bg-white border border-slate-200 rounded-xl shadow-lg transition-all duration-300 ease-in-out ">
             <div className="flex justify-between items-start">
               <div>
