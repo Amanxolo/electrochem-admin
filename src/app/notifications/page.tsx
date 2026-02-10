@@ -2,10 +2,15 @@
 
 import { useEffect, useState } from "react";
 import { Mail, Clock, ChevronRight } from "lucide-react";
-import Link from "next/link";
+interface INotification{
+    _id:string
+    userEmail:string,
+    createdAt:string
+
+}
 
 export default function BulkInquiriesPage() {
-  const [notifications, setNotifications] = useState<any[]>([]);
+  const [notifications, setNotifications] = useState<INotification[]>([]);
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
@@ -37,7 +42,7 @@ export default function BulkInquiriesPage() {
               <p className="py-10 text-slate-400 italic">No inquiries found.</p>
             ) : (
               notifications.map((note) => (
-                <div className="flex items-start gap-4">
+                <div className="flex items-start gap-4" key={note._id}>
                   <div className="mt-1">
                     <Mail className="h-5 w-5 text-emerald-600" />
                   </div>
