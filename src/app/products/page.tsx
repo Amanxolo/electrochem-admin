@@ -22,20 +22,25 @@ interface Product {
   stock: number
   image: string
   minQuantity: number
+  pricing?: {
+    individual?: number
+    reseller?: number
+    oem?: number
+  }
 }
 
 export default function AdminPanel() {
   const [animationStage, setAnimationStage] = useState(0)
-  const { mutate: addProduct } = trpc.product.addProduct.useMutation();
+  // const { mutate: addProduct } = trpc.product.addProduct.useMutation();
   const { mutate: updateProduct } = trpc.product.updateProduct.useMutation();
   const { mutate: deleteProduct } = trpc.product.deleteProduct.useMutation();
+  const { mutate: setUserTypePrice } = trpc.product.setUserTypePrice.useMutation();
   const { data: fetchedProducts } = trpc.product.getAll.useQuery();
   const utils = trpc.useUtils();
 
   const [products, setProducts] = useState<Product[]>([]);
 
   useEffect(() => {
-    console.log(fetchedProducts)
     if (fetchedProducts) {
       const transformed = fetchedProducts.map((prod) => ({
         id: String(prod._id), // or use prod._id if you want
@@ -43,9 +48,10 @@ export default function AdminPanel() {
         category: prod.productCategory,
         price: prod.price,
         description: prod.prodSpecs || "",
-        stock: prod.stock,
+        stock: prod.stock ?? 0,
         image: prod.image?.[0] || "/placeholder.svg?height=200&width=200",
         minQuantity: prod.minQuantity,
+        pricing: (prod as { pricing?: Product["pricing"] }).pricing || {},
       }));
       setProducts(transformed);
     }
@@ -314,6 +320,11 @@ export default function AdminPanel() {
   ]);
   const [newCategory, setNewCategory] = useState("");
 
+  // Pricing management state
+  const [selectedPricingProductId, setSelectedPricingProductId] = useState<string | null>(null);
+  const [pricingUserType, setPricingUserType] = useState<"individual" | "reseller" | "oem">("individual");
+  const [pricingValue, setPricingValue] = useState<string>("");
+
   // Add category
   const handleAddCategory = () => {
     if (newCategory.trim() !== "" && !categories.includes(newCategory)) {
@@ -530,7 +541,7 @@ export default function AdminPanel() {
         <div className="max-w-7xl mx-auto px-8 pb-16 pt-8">
           <Tabs defaultValue="add" className="w-full">
             {/* Enhanced Tab Navigation */}
-            <TabsList className="grid w-full grid-cols-3 mb-12 bg-gray-900/80 border border-gray-800/50 backdrop-blur-sm h-14 p-1 rounded-xl">
+            <TabsList className="grid w-full grid-cols-4 mb-12 bg-gray-900/80 border border-gray-800/50 backdrop-blur-sm h-14 p-1 rounded-xl">
               <TabsTrigger
                 value="add"
                 className="data-[state=active]:bg-green-500 data-[state=active]:text-black data-[state=active]:shadow-lg data-[state=active]:shadow-green-500/25 text-gray-300 hover:text-white transition-all duration-300 rounded-lg font-medium"
@@ -551,6 +562,13 @@ export default function AdminPanel() {
               >
                 <Trash2 className="h-5 w-5 mr-3" />
                 Delete Product
+              </TabsTrigger>
+              <TabsTrigger
+                value="pricing"
+                className="data-[state=active]:bg-green-500 data-[state=active]:text-black data-[state=active]:shadow-lg data-[state=active]:shadow-green-500/25 text-gray-300 hover:text-white transition-all duration-300 rounded-lg font-medium"
+              >
+                <Package className="h-5 w-5 mr-3" />
+                Pricing by User Type
               </TabsTrigger>
             </TabsList>
 
@@ -1032,6 +1050,158 @@ export default function AdminPanel() {
                         </p>
                       </div>
                     )}
+                  </div>
+                </CardContent>
+              </Card>
+            </TabsContent>
+
+            {/* Pricing Tab */}
+            <TabsContent value="pricing" className="mt-0">
+              <Card className="bg-gray-900/90 border-gray-800/50 shadow-2xl backdrop-blur-sm rounded-2xl overflow-hidden">
+                <CardHeader className="border-b border-gray-800/50 bg-gray-900/50 px-8 py-6">
+                  <CardTitle className="text-white flex items-center gap-3 text-xl">
+                    <div className="p-2 bg-green-500/20 rounded-lg">
+                      <Package className="h-6 w-6 text-green-400" />
+                    </div>
+                    Manage Pricing by User Type
+                  </CardTitle>
+                  <CardDescription className="text-gray-400 text-base mt-2">
+                    Select a product, choose a user type, and set a specific price. Individual price is treated as the default/base.
+                  </CardDescription>
+                </CardHeader>
+                <CardContent className="p-8 space-y-8">
+                  <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+                    {/* Product selector */}
+                    <div className="space-y-3">
+                      <label className="text-sm font-semibold text-gray-300 uppercase tracking-wide">
+                        Product
+                      </label>
+                      <Select
+                        value={selectedPricingProductId || ""}
+                        onValueChange={(value) => {
+                          setSelectedPricingProductId(value);
+                          const prod = products.find((p) => p.id === value);
+                          if (prod) {
+                            const current =
+                              pricingUserType === "individual"
+                                ? prod.pricing?.individual ?? prod.price
+                                : pricingUserType === "reseller"
+                                ? prod.pricing?.reseller ?? prod.price
+                                : prod.pricing?.oem ?? prod.price;
+                            setPricingValue(current.toString());
+                          } else {
+                            setPricingValue("");
+                          }
+                        }}
+                      >
+                        <SelectTrigger className="bg-black/50 border-gray-700/50 text-white focus:border-green-400 focus:ring-green-400/20 h-12 rounded-xl">
+                          <SelectValue placeholder="Select product" />
+                        </SelectTrigger>
+                        <SelectContent className="bg-black/80 backdrop-blur-md border border-gray-700 rounded-xl text-white shadow-2xl max-h-72">
+                          {products.map((p) => (
+                            <SelectItem key={p.id} value={p.id}>
+                              {p.name}{" "}
+                              <span className="text-xs text-gray-400">
+                                ({p.category})
+                              </span>
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+
+                    {/* User type & price */}
+                    <div className="space-y-3">
+                      <label className="text-sm font-semibold text-gray-300 uppercase tracking-wide">
+                        User Type & Price
+                      </label>
+                      <div className="flex flex-col md:flex-row gap-3">
+                        <Select
+                          value={pricingUserType}
+                          onValueChange={(val) => {
+                            const castVal = val as "individual" | "reseller" | "oem";
+                            setPricingUserType(castVal);
+                            if (selectedPricingProductId) {
+                              const prod = products.find(
+                                (p) => p.id === selectedPricingProductId
+                              );
+                              if (prod) {
+                                const current =
+                                  castVal === "individual"
+                                    ? prod.pricing?.individual ?? prod.price
+                                    : castVal === "reseller"
+                                    ? prod.pricing?.reseller ?? prod.price
+                                    : prod.pricing?.oem ?? prod.price;
+                                setPricingValue(current.toString());
+                              } else {
+                                setPricingValue("");
+                              }
+                            }
+                          }}
+                        >
+                          <SelectTrigger className="bg-black/50 border-gray-700/50 text-white focus:border-green-400 focus:ring-green-400/20 h-12 rounded-xl md:w-48">
+                            <SelectValue placeholder="Select user type" />
+                          </SelectTrigger>
+                          <SelectContent className="bg-black/80 backdrop-blur-md border border-gray-700 rounded-xl text-white shadow-2xl">
+                            <SelectItem value="individual">Individual (default)</SelectItem>
+                            <SelectItem value="reseller">Reseller</SelectItem>
+                            <SelectItem value="oem">OEM</SelectItem>
+                          </SelectContent>
+                        </Select>
+                        <Input
+                          type="number"
+                          placeholder="0.00"
+                          value={pricingValue}
+                          onChange={(e) => setPricingValue(e.target.value)}
+                          className="bg-black/50 border-gray-700/50 text-white placeholder:text-gray-500 focus:border-green-400 focus:ring-green-400/20 h-12 rounded-xl flex-1"
+                        />
+                      </div>
+                      <p className="text-xs text-gray-400">
+                        Setting the Individual price will also update the base product price used throughout the site.
+                      </p>
+                    </div>
+                  </div>
+
+                  <div className="flex justify-end">
+                    <Button
+                      type="button"
+                      className="bg-green-500 hover:bg-green-600 text-black font-semibold px-6 h-12 rounded-xl"
+                      onClick={() => {
+                        if (!selectedPricingProductId) {
+                          toast.error("Please select a product first.");
+                          return;
+                        }
+                        const numeric = Number(pricingValue);
+                        if (!Number.isFinite(numeric) || numeric <= 0) {
+                          toast.error("Please enter a valid price.");
+                          return;
+                        }
+                        setUserTypePrice(
+                          {
+                            id: selectedPricingProductId,
+                            userType: pricingUserType,
+                            price: numeric,
+                          },
+                          {
+                            onSuccess: () => {
+                              toast.success("Pricing updated successfully.");
+                              utils.product.getAll.invalidate();
+                            },
+                            onError: (err: unknown) => {
+                              console.error("Pricing update error:", err);
+                              let message = `Unexpected Error ${err}`;
+                              if (err instanceof Error) {
+                                message = err.message;
+                              }
+                              toast.error(message || "Failed to update pricing.");
+                            },
+                          }
+                        );
+                      }}
+                    >
+                      <Save className="h-5 w-5 mr-2" />
+                      Save Pricing
+                    </Button>
                   </div>
                 </CardContent>
               </Card>

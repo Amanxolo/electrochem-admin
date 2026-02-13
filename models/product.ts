@@ -6,6 +6,12 @@ interface ISubProduct {
   M_AhRating: number;
 }
 
+export interface IUserTypePricing {
+  individual?: number;
+  reseller?: number;
+  oem?: number;
+}
+
 export interface IProduct extends Document {
   productId: string;
   productName: string;
@@ -14,10 +20,20 @@ export interface IProduct extends Document {
   productCategory: string;
   subprodlst: ISubProduct[];
   image: string[];
+  /**
+   * Base price (used as default / individual price).
+   * For user-type specific pricing, see `pricing`.
+   */
   price: number;
+  /**
+   * Optional per-user-type pricing overrides.
+   */
+  pricing?: IUserTypePricing;
   minQuantity: number;
-  stock:number;
+  stock: number;
   prodSpecs?: string;
+  createdAt: Date;
+  updatedAt: Date;
 }
 
 const subProductSchema = new Schema<ISubProduct>({
@@ -42,9 +58,18 @@ const productSchema = new Schema<IProduct>({
       message: 'Each image should be a valid string.',
     },
   },
+  // Base price: treat as individual/default
   price: { type: Number, required: true },
-  stock:{type:Number,required:true,default:0},
+  // Optional per-user-type pricing overrides
+  pricing: {
+    individual: { type: Number, required: false },
+    reseller: { type: Number, required: false },
+    oem: { type: Number, required: false },
+  },
   minQuantity: { type: Number, required: true },
+  stock: { type: Number, required: true, default: 0 },
+}, {
+  timestamps: true, // This adds createdAt and updatedAt fields automatically
 });
 
 export const Product = models.Product || mongoose.model<IProduct>('Product', productSchema);

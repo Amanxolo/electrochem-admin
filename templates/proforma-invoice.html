@@ -1,0 +1,278 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>PDF Document</title>
+</head>
+<style>
+    body {
+        margin: 0;
+        padding: 0;
+        box-sizing: border-box;
+        font-family: Arial, Helvetica, sans-serif;
+        font-size: 14px;
+        -webkit-print-color-adjust: exact;
+        print-color-adjust: exact;
+    }
+
+   
+    
+    .invoice-container p, .invoice-container td, .invoice-container th {
+        overflow-wrap: break-word;
+        word-wrap: break-word;
+        word-break: break-all;
+    }
+    #header {
+        text-align: center;
+        font-size: 48px;
+        font-weight: bold;
+        margin-bottom: 20px;
+    }
+
+    
+    #details {
+        display: flex;
+        flex-direction: row;
+        width: 100%;
+        
+    }
+
+    .left {
+        width: 50%;
+        border: 1px solid black;
+        border-right: none;
+    }
+
+    .right {
+        width: 50%;
+        border: 1px solid black;
+    }
+
+    .address {
+        display: flex;
+        flex-direction: row;
+        padding: 15px 5px;
+        border-bottom: 1px solid black;
+    }
+    .address p {
+        margin: 0;
+        line-height: 1.4;
+    }
+
+    .reciever, .sender {
+        padding: 15px 5px;
+    }
+    
+    .reciever {
+        border-bottom: 1px solid black;
+    }
+
+    .right-top {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+    }
+    .right{
+        border-right: 2px solid black;
+    }
+    .grid-top-cell {
+        border-right: 1px solid black;
+        border-bottom: 1px solid black;
+        padding: 8px 5px;
+        overflow-wrap: break-word;
+        min-height: 50px;
+    }
+
+    .grid-top-cell:nth-child(2n) {
+        border-right: none;
+    }
+    
+    .grid-top-cell p {
+        margin: 0;
+    }
+    .grid-top-cell p:first-child {
+        font-weight: bold;
+        margin-bottom: 4px;
+    }
+
+    .right-bottom {
+        padding: 8px 10px;
+        border-top: 1px solid black;
+    }
+    .right-bottom p {
+        margin: 0;
+        font-weight: bold;
+    }
+    
+    
+    .invoice-table {
+        width: 100%;
+        border-collapse: collapse;
+        border: 1px solid black;
+        border-right: 2px solid black;
+    }
+
+    .invoice-table th,
+    .invoice-table td {
+        border: 1px solid black;
+        padding: 8px 10px;
+        text-align: left;
+    }
+
+    .invoice-table th {
+        background-color: #f2f2f2;
+        font-weight: bold;
+    }
+    
+    .text-right {
+        text-align: right;
+    }
+
+    .font-bold {
+        font-weight: bold;
+    }
+
+   
+    .invoice-table tfoot td {
+        border: none;
+        text-align: right;
+        padding: 6px 10px;
+    }
+    
+    .invoice-table tfoot tr.total-row td {
+        border-top: 1px solid black;
+        font-weight: bold;
+        padding-top: 10px;
+    }
+
+</style>
+<body>
+    <div class="invoice-container">
+        <p id="header">Proforma Invoice</p>
+        <div id="details">
+            <div class="left">
+                <div class="address">
+                    <div class="logo" style="padding-right: 15px;">
+                        <img src={{logoUrl}} alt="Logo-not-found" style="max-width: 100px; height: auto;">
+                    </div>
+                    <div class="address-text">
+                        <p style="font-weight: bold; font-size: 16px;">Electrochem Power</p>
+                        <p>
+                            E-12, THIRD FLOOR, SECTOR-63.
+                            NOIDA, GAUTAM BUDDHA NAGAR<br>
+                            Pin Code-201301<br>
+                            GSTIN/UIN: 09AANCA8198B1ZA<br>
+                            State Name : Uttar Pradesh, Code : 09<br>
+                            CIN: U36999DL2015PTC286312
+                        </p>
+                    </div>
+                </div>
+                <div class="reciever">
+                    <p style="margin: 0 0 4px 0;">Consignee (Ship To)</p>
+                    <p style="font-weight: bold; margin: 0; font-size: 16px;">{{customerName}}</p>
+                    <p style="margin: 4px 0 0 0;">
+                        {{customerAddress}}<br>
+                        {{customerPhone}}<br>
+                        <!-- GSTIN/UIN : {{customerGSTIN}}<br> -->
+                        State Name : {{customerState}}
+                    </p>
+                </div>
+                <div class="sender">
+                    <p style="margin: 0 0 4px 0;">Buyer (Bill To)</p>
+                    <p style="font-weight:bold; margin:0; font-size: 16px;">Electrochem Power</p>
+                     <p>
+                            E-12, THIRD FLOOR, SECTOR-63.
+                            NOIDA, GAUTAM BUDDHA NAGAR<br>
+                            Pin Code-201301<br>
+                            GSTIN/UIN: 09AANCA8198B1ZA<br>
+                            State Name : Uttar Pradesh, Code:09<br>
+                            CIN: U36999DL2015PTC286312
+                    </p>
+                </div>
+            </div>
+            <div class="right">
+                <div class="right-top">
+                    <div class="grid-top-cell">
+                        <p>Invoice No</p>
+                        <p>{{piNumber}}</p>
+                    </div>
+                    <div class="grid-top-cell">
+                        <p>Dated</p>
+                        <p>{{issueDate}}</p>
+                    </div>
+                    <div class="grid-top-cell">
+                        <p>Valid Until</p>
+                        <p>{{validUntil}}</p>
+                    </div>
+                    <div class="grid-top-cell">
+                        <p>Modes of Payment</p>
+                        <p>Bank Transfer</p>
+                    </div>
+                    <div class="grid-top-cell">
+                        <p>Supplier Reference</p>
+                        <p>{{piNumber}}</p>
+                    </div>
+                    <div class="grid-top-cell">
+                        <p>Other Reference(s)</p>
+                        <p>{{notes}}</p>
+                    </div>
+                    <div class="grid-top-cell">
+                        <p>Dispatch Thru</p>
+                        <p>COURIER</p>
+                    </div>
+                    <div class="grid-top-cell">
+                        <p>Destination</p>
+                        <p>{{customerAddress}}</p>
+                    </div>
+                </div>
+                <div class="right-bottom">
+                    <p>Terms of Delivery</p>
+                </div>
+            </div>
+        </div>
+        
+        <table class="invoice-table">
+            <thead>
+                <tr>
+                    <th>Sl No.</th>
+                    <th>Description of Goods</th>
+                    <th>HSN/SAC</th>
+                    <th>Due on</th>
+                    <th>Quantity</th>
+                    <th>Rate</th>
+                    <th>per</th>
+                    <th>Amount</th>
+                </tr>
+            </thead>
+            <tbody>
+                {{items}}
+            </tbody>
+            <tfoot>
+                <tr>
+                    <td colspan="7" class="text-right">Subtotal</td>
+                    <td class="text-right">{{subtotal}}</td>
+                </tr>
+                <tr>
+                    <td colspan="7" class="text-right">Discount</td>
+                    <td class="text-right">{{discount}}</td>
+                </tr>
+                <tr>
+                    <td colspan="7" class="text-right">CGST @ {{cgstRate}}%</td>
+                    <td class="text-right">{{cgstAmount}}</td>
+                </tr>
+                 <tr>
+                    <td colspan="7" class="text-right">SGST @ {{sgstRate}}%</td>
+                    <td class="text-right">{{sgstAmount}}</td>
+                </tr>
+                <tr class="total-row">
+                    <td colspan="7" class="text-right">Total (in Rs)</td>
+                    <td class="text-right">{{totalAmount}}</td>
+                </tr>
+            </tfoot>
+        </table>
+    </div>
+</body>
+</html>
+
+
+
