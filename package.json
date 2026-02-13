@@ -22,7 +22,7 @@
     "lucide-react": "^0.545.0",
     "mongodb": "^6.17.0",
     "mongoose": "^8.13.2",
-    "next": "15.5.4",
+    "next": "15.5.9",
     "puppeteer": "^24.37.1",
     "radix-ui": "^1.4.3",
     "react": "19.1.0",
