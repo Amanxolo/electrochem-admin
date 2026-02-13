@@ -201,7 +201,7 @@ export async function POST(req: Request) {
 
     // Send email with PDF attachment via Resend using the generated buffer
     const { data: emailResult, error } = await resend.emails.send({
-      from: "support@mail.ashishiii.co.in",
+      from: "sales@electrochembattery.com",
       to: email,
       subject: `Proforma Invoice ${piNumber} - ElectroChem`,
       html: `<p>Dear ${customerName},</p>

@@ -7,8 +7,7 @@ export interface IOrder extends Document {
   payment?: Types.ObjectId;
   items: OrderItem[]; 
   totalAmount: number;
-  discount:number;
-  status: 'pending' | 'placed' | 'processing' | 'shipped' | 'delivered' | 'cancelled';
+  status: 'not-verified' | 'pending' | 'placed' | 'processing' | 'shipped' | 'delivered' | 'cancelled';
   isEmailSent?:boolean;
   shippingAddress: Address;
   billingAddress: Address;
@@ -20,12 +19,11 @@ const orderSchema = new Schema<IOrder>({
   user: { type: Schema.Types.ObjectId, ref: 'User', required: true },
   payment: {type:Schema.Types.ObjectId,ref:'Payment'},
   items: [orderItemSchema], 
-  discount:{type:Number,default:0},
   totalAmount: { type: Number, required: true },
   isEmailSent:{type:Boolean,default:false},
   status: { 
     type: String, 
-    enum: ['pending','placed','processing', 'shipped', 'delivered', 'cancelled'], 
+    enum: ['pending','placed','processing', 'shipped', 'delivered', 'cancelled','not-verified'], 
     default: 'pending' 
   },
   shippingAddress: { type: addressSchema, required: true },
