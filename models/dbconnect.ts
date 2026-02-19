@@ -1,20 +1,49 @@
-import mongoose from 'mongoose';
+import mongoose from "mongoose";
 
 const MONGODB_URI = process.env.MONGO_URI as string;
 
 if (!MONGODB_URI) {
-  throw new Error('Please define the MONGODB_URI in .env.local');
+  throw new Error("Please define the MONGODB_URI in .env.local");
 }
 
-let isConnected = false;
+declare global {
+  var mongoose: {
+    conn: typeof import("mongoose") | null;
+    promise: Promise<typeof import("mongoose")> | null;
+  };
+}
+
+let cached = global.mongoose;
+
+if (!cached) {
+  cached = global.mongoose = { conn: null, promise: null };
+}
 
 export async function dbConnect() {
-  if (isConnected){
-    console.log('MongoDB is already connected');
-    return;
+  // Reuse existing connection
+  if (cached.conn) {
+    return cached.conn;
   }
-  const db = await mongoose.connect(MONGODB_URI);
-  isConnected = db.connections[0].readyState === 1;
+
+  // Reuse in-flight promise (prevents multiple simultaneous connections)
+  if (!cached.promise) {
+    cached.promise = mongoose
+      .connect(MONGODB_URI, {
+        bufferCommands: false,
+        serverSelectionTimeoutMS: 10000,
+        socketTimeoutMS: 45000,
+      })
+      .then((mongoose) => mongoose);
+  }
+
+  try {
+    cached.conn = await cached.promise;
+  } catch (e) {
+    cached.promise = null;
+    throw e;
+  }
+
+  return cached.conn;
 }
 
 export async function uploadToGridFS(file: File): Promise<string> {

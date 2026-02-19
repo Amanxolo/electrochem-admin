@@ -79,7 +79,8 @@ export default function OrderVerificationPage() {
             body:JSON.stringify({
                 email,
                 items,
-                orderId
+                orderId,
+                discount:discount[orderId] || 0
             })
         })
         if(res.ok){
@@ -198,7 +199,7 @@ export default function OrderVerificationPage() {
                             : "bg-green-50 text-green-600"
                         }`}
                       >
-                        {order.status}
+                       {order.status}
                       </span>
                       <p className="text-[10px] text-gray-600 mt-1">
                         ID: {order._id}
