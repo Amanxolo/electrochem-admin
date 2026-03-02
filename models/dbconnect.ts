@@ -24,26 +24,30 @@ export async function dbConnect() {
   if (cached.conn) {
     return cached.conn;
   }
-
+  const MAX_RETRIES = 2;
   // Reuse in-flight promise (prevents multiple simultaneous connections)
-  if (!cached.promise) {
-    cached.promise = mongoose
-      .connect(MONGODB_URI, {
-        bufferCommands: false,
-        serverSelectionTimeoutMS: 10000,
-        socketTimeoutMS: 45000,
-      })
-      .then((mongoose) => mongoose);
-  }
+  for (let attempt = 0; attempt < MAX_RETRIES; attempt++) {
+    try {
+      if (!cached.promise) {
+        cached.promise = mongoose.connect(MONGODB_URI, {
+          bufferCommands: false,
+          serverSelectionTimeoutMS: 30000,
+          socketTimeoutMS: 60000,
+        });
+      }
 
-  try {
-    cached.conn = await cached.promise;
-  } catch (e) {
-    cached.promise = null;
-    throw e;
-  }
+      cached.conn = await cached.promise;
+      return cached.conn; // success → exit
+    } catch (e) {
+      cached.promise = null; // reset
 
-  return cached.conn;
+      if (attempt === MAX_RETRIES - 1) {
+        throw e; // only throw on last attempt
+      }
+
+      // console.log(`Retrying MongoDB connection... Attempt ${attempt + 1}`);
+    }
+  }
 }
 
 export async function uploadToGridFS(file: File): Promise<string> {

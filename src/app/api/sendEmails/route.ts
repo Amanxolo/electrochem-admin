@@ -1,13 +1,26 @@
 import { NextResponse } from "next/server";
 import { Resend } from "resend";
-import puppeteer from "puppeteer";
+
+import chromium from '@sparticuz/chromium';
+import type { PuppeteerNode } from "puppeteer-core";
 import fs from "fs";
 import path from "path";
 import { dbConnect } from "../../../../models/dbconnect";
 import { User } from "../../../../models/user";
 import { Order } from "../../../../models/order";
 
+let puppeteer:PuppeteerNode;
 const resend = new Resend(process.env.RESEND_API_KEY!);
+
+const isProduction = process.env.NODE_ENV === "production";
+
+if (isProduction) {
+  const mod= await import("puppeteer-core");
+  puppeteer = mod.default;
+} else {
+  const mod = await import("puppeteer");
+  puppeteer = ( mod as unknown as { default: PuppeteerNode }).default;
+}
 
 interface CartItemInput {
   id?: string;
@@ -217,7 +230,10 @@ export async function POST(req: Request) {
     // Generate PDF in memory using Puppeteer
     const browser = await puppeteer.launch({
       headless: true,
-      args: ["--no-sandbox", "--disable-setuid-sandbox"],
+      args: isProduction? chromium.args:["--no-sandbox", "--disable-setuid-sandbox"],
+      executablePath: isProduction ? await chromium.executablePath() : undefined,
+      
+
     });
 
     const page = await browser.newPage();
@@ -239,7 +255,7 @@ export async function POST(req: Request) {
     // Send email with PDF attachment via Resend using the generated buffer
     const { data: emailResult, error } = await resend.emails.send({
       from: "sales@electrochembattery.com",
-      to: email,
+      to: "bhardwajashish601@gmail.com",
       subject: `Proforma Invoice ${piNumber} - ElectroChem`,
       html: `<p>Dear ${customerName},</p>
              <p>Thank you for your order. Please find attached the Proforma Invoice <strong>${piNumber}</strong>.</p>
