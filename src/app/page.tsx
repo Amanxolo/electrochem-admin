@@ -96,6 +96,12 @@ export default function Home() {
           >
             Products
           </Link>
+           <Link
+            href="/userverification"
+            className="text-sm font-medium hover:underline underline-offset-4"
+          >
+            User Verifcation
+          </Link>
           <Link
             href="/complaints"
             className="text-sm font-medium hover:underline underline-offset-4"

@@ -13,6 +13,7 @@ interface CartItemInput {
   id?: string;
   productName: string;
   quantity: number;
+  category: string;
   price: number;
 }
 
@@ -24,41 +25,42 @@ export async function POST(req: Request) {
       items: CartItemInput[];
       email: string;
       orderId: string;
+      discount: number;
     };
 
-    const { items, email, orderId } = body;
+    const { items, email, orderId, discount } = body;
 
     if (!items || items.length === 0) {
       return NextResponse.json(
         { message: "Cart is empty. Cannot generate invoice." },
-        { status: 400 }
+        { status: 400 },
       );
     }
 
     if (!email) {
       return NextResponse.json(
         { message: "Customer email is required." },
-        { status: 400 }
+        { status: 400 },
       );
     }
-    if(!orderId){
+    if (!orderId) {
       return NextResponse.json(
         { message: "Order ID is required to link the invoice." },
-        { status: 400 }
+        { status: 400 },
       );
     }
     const user = await User.findOne({ email });
     const order = await Order.findById(orderId);
-    if(!order){
+    if (!order) {
       return NextResponse.json(
         { message: "Order not found." },
-        { status: 404 }
+        { status: 404 },
       );
     }
     if (!user) {
       return NextResponse.json(
         { message: "User not found for the provided email." },
-        { status: 404 }
+        { status: 404 },
       );
     }
 
@@ -70,15 +72,43 @@ export async function POST(req: Request) {
       totalPrice: (Number(item.price) || 0) * (Number(item.quantity) || 1),
     }));
 
+    const primaryAddress = user?.addresses?.[0];
+    const userState = primaryAddress?.state?.toLowerCase().trim() || " ";
+    const isUP = userState === "uttar pradesh" || userState === "up";
+
+    let sgst: number = 0;
+    let cgst: number = 0;
+    let igst: number = 0;
+    let subtotal: number = 0;
+    for (const item of items) {
+      const isCharger: boolean =
+        item.category.toLowerCase().trim() === "charger" ||
+        item.category.toLowerCase().trim() === "chargers";
+      const itemSubtotal: number = item.quantity * item.price;
+
+      if (isUP && isCharger) {
+        sgst += itemSubtotal * 0.025;
+        cgst += itemSubtotal * 0.025;
+      } else if (isUP && !isCharger) {
+        sgst += itemSubtotal * 0.09;
+        cgst += itemSubtotal * 0.09;
+      } else if (!isUP && isCharger) {
+        igst += itemSubtotal * 0.05;
+      } else if (!isUP && !isCharger) {
+        igst += itemSubtotal * 0.18;
+      }
+      subtotal += itemSubtotal;
+    }
     // Calculate totals (same tax structure as template: CGST + SGST)
-    const subtotal = order.totalAmount || 0;
-    const taxRate = 18; // 18% total GST
-    const cgstRate = taxRate / 2; // 9%
-    const sgstRate = taxRate / 2; // 9%
-    const cgstAmount = (subtotal * cgstRate) / 100;
-    const sgstAmount = (subtotal * sgstRate) / 100;
-    const discount = order?.discount || 0;
-    const totalAmount = subtotal + cgstAmount + sgstAmount - discount;
+
+    // const taxRate = 18; // 18% total GST
+    // const cgstRate = taxRate / 2; // 9%
+    // const sgstRate = taxRate / 2; // 9%
+    const cgstAmount = cgst;
+    const sgstAmount = sgst;
+    const igstAmount = igst;
+
+    const totalAmount = subtotal + cgstAmount + sgstAmount + igstAmount - discount;
 
     // Generate PI number
     const now = new Date();
@@ -93,7 +123,7 @@ export async function POST(req: Request) {
     let templatePath = path.join(
       process.cwd(),
       "templates",
-      "proforma-invoice.html"
+      "proforma-invoice.html",
     );
     if (!fs.existsSync(templatePath)) {
       // Fallback if project root differs
@@ -101,7 +131,7 @@ export async function POST(req: Request) {
         process.cwd(),
         "electrochem-store",
         "templates",
-        "proforma-invoice.html"
+        "proforma-invoice.html",
       );
     }
 
@@ -109,14 +139,19 @@ export async function POST(req: Request) {
       console.error("Template not found at", templatePath);
       return NextResponse.json(
         { message: "Invoice template file not found." },
-        { status: 500 }
+        { status: 500 },
       );
     }
 
     const template = fs.readFileSync(templatePath, "utf8");
 
     // Load logo as data URL (fallback to empty if missing)
-    const logoPath = path.join(process.cwd(), "public", "images", "ELECTROCHEM-LOGO-1 (1).svg");
+    const logoPath = path.join(
+      process.cwd(),
+      "public",
+      "images",
+      "ELECTROCHEM-LOGO-1 (1).svg",
+    );
     let logoDataUrl = "";
     if (fs.existsSync(logoPath)) {
       const logoContent = fs.readFileSync(logoPath, "utf8");
@@ -125,7 +160,7 @@ export async function POST(req: Request) {
 
     // Build items rows HTML
     const validUntil = new Date(
-      now.getTime() + 30 * 24 * 60 * 60 * 1000
+      now.getTime() + 30 * 24 * 60 * 60 * 1000,
     ).toLocaleDateString();
 
     const itemsHtml = processedItems
@@ -141,12 +176,12 @@ export async function POST(req: Request) {
         <td>PCS</td>
         <td class="text-right font-bold">${item.totalPrice.toFixed(2)}</td>
       </tr>
-    `
+    `,
       )
       .join("");
 
     // Extract address info from user
-    const primaryAddress = user.addresses?.[0];
+    // const primaryAddress = user.addresses?.[0];
 
     const customerName = user.name || "Valued Customer";
     const customerAddress =
@@ -163,16 +198,18 @@ export async function POST(req: Request) {
       .replace(/{{issueDate}}/g, now.toLocaleDateString())
       .replace(/{{validUntil}}/g, validUntil)
       .replace(/{{customerName}}/g, customerName)
-      .replace(/{{customerAddress}}/g, customerAddress || "Address not provided")
+      .replace(
+        /{{customerAddress}}/g,
+        customerAddress || "Address not provided",
+      )
       .replace(/{{customerPhone}}/g, customerPhone || "Phone not provided")
       .replace(/{{customerGSTIN}}/g, customerGSTIN)
       .replace(/{{customerState}}/g, customerState)
       .replace(/{{subtotal}}/g, subtotal.toFixed(2))
       .replace(/{{discount}}/g, discount.toFixed(2))
-      .replace(/{{cgstRate}}/g, cgstRate.toFixed(0))
       .replace(/{{cgstAmount}}/g, cgstAmount.toFixed(2))
-      .replace(/{{sgstRate}}/g, sgstRate.toFixed(0))
       .replace(/{{sgstAmount}}/g, sgstAmount.toFixed(2))
+      .replace(/{{igstAmount}}/g, igstAmount.toFixed(2))
       .replace(/{{totalAmount}}/g, totalAmount.toFixed(2))
       .replace(/{{notes}}/g, "")
       .replace(/{{items}}/g, itemsHtml);
@@ -220,7 +257,7 @@ export async function POST(req: Request) {
       console.error("Resend API Error:", error);
       return NextResponse.json(
         { message: "Failed to send invoice email." },
-        { status: 502 }
+        { status: 502 },
       );
     }
 
@@ -238,13 +275,13 @@ export async function POST(req: Request) {
         message: "Invoice email sent successfully.",
         data: emailResult,
       },
-      { status: 201 }
+      { status: 201 },
     );
   } catch (err) {
     console.error("Error generating or sending invoice:", err);
     return NextResponse.json(
       { message: "Internal Server Error." },
-      { status: 500 }
+      { status: 500 },
     );
   }
 }
