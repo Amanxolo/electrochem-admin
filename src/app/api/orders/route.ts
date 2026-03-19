@@ -2,15 +2,31 @@ import { NextRequest, NextResponse } from "next/server";
 import { dbConnect } from "../../../../models/dbconnect";
 import { Order } from "../../../../models/order";
 import { User, OrderItem } from "../../../../models/user";
-import { Payment } from "../../../../models/payment";
+import { Payment, IPayment } from "../../../../models/payment";
 import { Product } from "../../../../models/product";
+import { UserPrice } from "../../../../models/userprice";
 import mongoose from "mongoose";
+
+interface IProduct {
+  _id: mongoose.Types.ObjectId | string;
+  productName: string;
+  productCategory: string;
+}
+interface IItems {
+  product_id: IProduct;
+  quantity: number;
+  Price: number;
+}
+export interface ICustomPrice {
+  product_id: mongoose.Types.ObjectId | string;
+  price: number;
+}
 export async function GET(req: NextRequest) {
   try {
     await dbConnect();
     const url = new URL(req.url);
     const queryType: string | null = url.searchParams.get("queryType");
-
+    let orders;
     switch (queryType) {
       case "orderById":
         const orderId = url.searchParams.get("id");
@@ -92,7 +108,7 @@ export async function GET(req: NextRequest) {
             path: "user",
             model: User,
             select: "name email userType",
-            match: { userType: { $in: ["reseller", "oem"] } },
+            match: { userType: { $in: ["individual"] } },
           })
           .populate({
             path: "payment",
@@ -107,12 +123,98 @@ export async function GET(req: NextRequest) {
           .select(
             "_id user totalAmount status createdAt payment items.product_id items.quantity items.Price isEmailSent ",
           );
-        const orders = allOrders.filter((order) => order.user !== null);
+        orders = allOrders.filter((order) => order.user !== null);
         if (!allOrders) {
           return NextResponse.json(
             { message: "Error finding Orders" },
             { status: 401 },
           );
+        }
+        return NextResponse.json({ orders }, { status: 200 });
+      case "ordersFromOEMandReseller":
+        const ordersFromOemAndReseller = await Order.find({
+          status: "not-verified",
+          user: { $exists: true },
+        })
+          .populate({
+            path: "user",
+            model: User,
+            select: "name email userType",
+            match: { userType: { $in: ["reseller", "oem"] } },
+          })
+          .populate({
+            path: "payment",
+            model: Payment,
+            select: "amount payment_mode payment_status",
+          })
+          .populate({
+            path: "items.product_id",
+            model: Product,
+            select: "productName productCategory",
+          })
+          .select(
+            "_id user totalAmount status createdAt payment items.product_id items.quantity items.Price isEmailSent ",
+          )
+          .lean();
+
+        orders = ordersFromOemAndReseller.filter(
+          (order) => order.user !== null,
+        );
+        if (!ordersFromOemAndReseller) {
+          return NextResponse.json(
+            { message: "Error finding Orders" },
+            { status: 401 },
+          );
+        }
+        const userIds = orders.map((order) => order.user._id);
+        const userPrices = await UserPrice.find({
+          user: { $in: userIds },
+        }).lean();
+        const userPriceMap = new Map();
+
+        for (const doc of userPrices) {
+          userPriceMap.set(doc.user.toString(), doc.customPrices);
+        }
+
+        // console.log(orders);
+        for (const order of orders) {
+          let newSubTotal = 0;
+          let taxAmount = 0;
+
+          const customPrices = userPriceMap.get(order.user._id.toString());
+
+          let productPriceMap: Map<string, number> | null = null;
+
+          if (customPrices) {
+            productPriceMap = new Map(
+              customPrices.map((cp: ICustomPrice) => [
+                cp.product_id.toString(),
+                cp.price,
+              ]),
+            );
+          }
+
+          for (const item of order.items) {
+            const productId = item.product_id._id.toString();
+
+            // Apply custom price if exists
+            if (productPriceMap && productPriceMap.has(productId)) {
+              item.Price = productPriceMap.get(productId)!;
+            }
+
+            const lineTotal = item.Price * item.quantity;
+            newSubTotal += lineTotal;
+
+            const category = item.product_id.productCategory
+              .toLowerCase()
+              .trim();
+
+            const isCharger = category === "charger" || category === "chargers";
+
+            taxAmount += isCharger ? lineTotal * 0.05 : lineTotal * 0.18;
+          }
+
+          order.totalAmount = newSubTotal + taxAmount;
         }
         return NextResponse.json({ orders }, { status: 200 });
       default:
@@ -139,11 +241,23 @@ export async function PUT(req: NextRequest) {
     switch (queryType) {
       case "approveOrder":
         body = await req.json();
-        const { orderId, discount } = body;
+        const { orderId, discount, email } = body;
         const order = await Order.findById(orderId);
+        if (!orderId || discount === undefined || !email) {
+          throw new Error(
+            "Missing required parameters: orderId, discount, or email",
+          );
+        }
         if (!order) {
           return NextResponse.json(
             { message: "Order Not Found" },
+            { status: 404 },
+          );
+        }
+        const user = await User.findOne({ email });
+        if (!user) {
+          return NextResponse.json(
+            { message: "User Not Found" },
             { status: 404 },
           );
         }
@@ -177,18 +291,31 @@ export async function PUT(req: NextRequest) {
               },
             });
           }
-          await Product.bulkWrite(stockUpdates,{session})
+          await Product.bulkWrite(stockUpdates, { session });
 
-          const originalAmount:number=order.totalAmount
-          const newTotal:number=Math.max(0,originalAmount-discount)
-          order.totalAmount=newTotal
-          order.status="placed"
-          await order.save({session})
-
+          const originalAmount: number = order.totalAmount;
+          const newTotal: number = Math.max(0, originalAmount - discount);
+          order.totalAmount = newTotal;
+          order.status = "pending";
+          const paymentPayload: IPayment = {
+            order: order._id as mongoose.Types.ObjectId,
+            amount: newTotal,
+            payment_mode: "online",
+            payment_status: "pending",
+          };
+          const payment = new Payment(paymentPayload);
+          await payment.save({ session });
+          await order.save({ session });
+          user.order.push(order._id);
+          await user.save({ session });
           await session.commitTransaction();
-          return NextResponse.json({message:`Order for ${orderId} placed successfully.`},{status:201})
+          return NextResponse.json(
+            { message: `Order for ${orderId} placed successfully.` },
+            { status: 201 },
+          );
         } catch (err) {
-            await session.abortTransaction();
+          await session.abortTransaction();
+
           return NextResponse.json(
             {
               message: "Internal Server Error",
@@ -196,8 +323,8 @@ export async function PUT(req: NextRequest) {
             },
             { status: 501 },
           );
-        }finally{
-            await session.endSession();
+        } finally {
+          await session.endSession();
         }
 
       case "statusUpdate":
@@ -223,6 +350,12 @@ export async function PUT(req: NextRequest) {
         );
     }
   } catch (error) {
+    if (error instanceof Error) {
+      return NextResponse.json(
+        { message: "Internal Server Error", error: error.message },
+        { status: 500 },
+      );
+    }
     return NextResponse.json(
       { message: "Internal Server Error" },
       { status: 500 },

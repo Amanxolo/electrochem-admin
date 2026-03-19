@@ -11,6 +11,7 @@
   "dependencies": {
     "@radix-ui/react-label": "^2.1.7",
     "@radix-ui/react-select": "^2.2.6",
+    "@sparticuz/chromium": "^143.0.4",
     "@tanstack/react-query": "^5.83.0",
     "@trpc/client": "^11.4.3",
     "@trpc/react-query": "^11.6.0",
@@ -23,7 +24,7 @@
     "mongodb": "^6.17.0",
     "mongoose": "^8.13.2",
     "next": "15.5.4",
-    "puppeteer": "^24.37.1",
+    "puppeteer-core": "^24.37.5",
     "radix-ui": "^1.4.3",
     "react": "19.1.0",
     "react-dom": "19.1.0",
@@ -31,6 +32,7 @@
     "resend": "^6.9.1",
     "sonner": "^2.0.7",
     "tailwind-merge": "^3.3.1",
+    "xlsx": "^0.18.5",
     "zod": "^4.1.12"
   },
   "devDependencies": {
@@ -44,6 +46,7 @@
     "eslint": "^9",
     "eslint-config-next": "15.5.4",
     "jsonwebtoken": "8.5.1",
+    "puppeteer": "^24.37.5",
     "tailwindcss": "^4",
     "typescript": "^5"
   }

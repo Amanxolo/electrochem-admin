@@ -7,16 +7,16 @@ interface IItems {
     _id: string;
     productName: string;
     productCategory: string;
-  }
+  };
   quantity: number;
   Price: number;
 }
-interface IItemsforEmail{
+interface IItemsforEmail {
   id?: string;
   productName: string;
   quantity: number;
   price: number;
-  category:string;
+  category: string;
 }
 interface IPayment {
   _id: string;
@@ -45,12 +45,14 @@ export default function OrderVerificationPage() {
   const [loading, setLoading] = useState<boolean>(false);
   const [discount, setDiscount] = useState<Record<string, number>>({});
   const [searchQuery, setSearchQuery] = useState<string>("");
-  const [verifying,setVerifying]=useState<boolean>(false);
+  const [verifying, setVerifying] = useState<boolean>(false);
   useEffect(() => {
     const fetchOrders = async () => {
       try {
         setLoading(true);
-        const res = await fetch("/api/orders?queryType=forVerification");
+        const res = await fetch(
+          "/api/orders?queryType=ordersFromOEMandReseller",
+        );
         if (!res.ok) {
           toast.error("Error fetching orders for verification");
           return;
@@ -68,65 +70,110 @@ export default function OrderVerificationPage() {
   const handleDiscountChange = (orderId: string, discountValue: number) => {
     setDiscount((prev) => ({ ...prev, [orderId]: discountValue }));
   };
-  const handleEmailInvoice=async(email:string,items:IItemsforEmail[],orderId:string)=>{
-    try{
-        setVerifying(true);
-        const res=await fetch("/api/sendEmails",{
-            method:"POST",
-            headers:{
-                "Content-Type":"application/json"
-            },
-            body:JSON.stringify({
-                email,
-                items,
-                orderId,
-                discount:discount[orderId] || 0
-            })
-        })
-        if(res.ok){
-            toast.success("Invoice email sent successfully");
-        }
-    }catch(error){
-        toast.error("Error sending invoice email");
-    }finally{
-        setVerifying(false);
+  const handlePriceChange = (orderId: string, itemId: string, newPrice: number) => {
+    
+    setOrders((prevOrders) =>
+      prevOrders.map((order) => {
+        if (order._id !== orderId) return order;
+
+        // Update the specific item price
+        let taxAmount:number=0;
+        const updatedItems = order.items.map((item) => {
+        
+          if(item.product_id.productCategory==="charger" || item.product_id.productCategory==="chargers"){
+            if(item.product_id._id === itemId) {
+                taxAmount+=(item.quantity*newPrice*0.05)
+            }else taxAmount+=(item.quantity*item.Price*0.05)
+          }else{
+            if(item.product_id._id === itemId) {
+                taxAmount+=(item.quantity*newPrice*0.18)
+            }else taxAmount+=(item.quantity*item.Price*0.18)
+          }
+          if (item.product_id._id === itemId) {
+            return { ...item, Price: newPrice };
+          }
+          return item;
+        });
+
+        // Recalculate totalAmount based on updated items
+        const newTotal = updatedItems.reduce(
+          (sum, item) => sum + item.Price * item.quantity,
+          0
+        );
+        order.totalAmount = newTotal+taxAmount;
+        return { ...order, items: updatedItems, totalAmount: newTotal+taxAmount };
+      })
+    );
+  };
+  const handleEmailInvoice = async (
+    email: string,
+    items: IItemsforEmail[],
+    orderId: string,
+  ) => {
+    try {
+      setVerifying(true);
+      const res = await fetch("/api/sendEmails", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          email,
+          items,
+          orderId,
+          discount: discount[orderId] || 0,
+        }),
+      });
+      if (res.ok) {
+        toast.success("Invoice email sent successfully");
+      }
+    } catch (error) {
+      toast.error("Error sending invoice email");
+    } finally {
+      setVerifying(false);
     }
+  };
+  const handleApproveOrder = async (
+    orderId: string,
+    email: string,
+    items: IItems[],
+  ) => {
+    try {
+      setVerifying(true);
+      const res = await fetch("/api/orders/placeOrderforOEMandReseller", {
+        method: "PUT",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          orderId,
+          discount: discount[orderId] || 0,
+          updatedItems:items,
+          email
 
-  }
-  const handleApproveOrder = async (orderId: string,email:string,items:IItems[]) => {
-    try{
-        setVerifying(true);
-        const res=await fetch("/api/orders?queryType=approveOrder",{
-            method:"PUT",
-            headers:{
-                "Content-Type":"application/json"
-            },
-            body:JSON.stringify({
-                orderId,
-                discount:discount[orderId] || 0,
-                email
-            })
-        })
+        }),
+      });
 
-        if(res.ok){
-            toast.success("Order approved successfully");
-            setOrders((prevOrders)=>prevOrders.filter((order)=>order._id!==orderId));
-            const itemsForEmails:IItemsforEmail[]=items.map((item)=>({
-              productName:item.product_id.productName,
-              quantity:item.quantity,
-              price:item.Price,
-              category:item.product_id.productCategory
-            }))
-            handleEmailInvoice(email,itemsForEmails,orderId);
-            return;
-        }
-        toast.error("Error approving order");
-    }catch(error){
-        toast.error("Error approving order");
-    }finally{
-        setVerifying(false);
+      if (res.ok) {
+        toast.success("Order approved successfully");
+        setOrders((prevOrders) =>
+          prevOrders.filter((order) => order._id !== orderId),
+        );
+        const itemsForEmails: IItemsforEmail[] = items.map((item) => ({
+          productName: item.product_id.productName,
+          quantity: item.quantity,
+          price: item.Price,
+          category: item.product_id.productCategory,
+        }));
+        handleEmailInvoice(email, itemsForEmails, orderId);
+        return;
+      }
+      toast.error("Error approving order");
+    } catch (error) {
+      toast.error("Error approving order");
+    } finally {
+      setVerifying(false);
     }
-
   };
 
   return (
@@ -200,7 +247,7 @@ export default function OrderVerificationPage() {
                             : "bg-green-50 text-green-600"
                         }`}
                       >
-                       {order.status}
+                        {order.status}
                       </span>
                       <p className="text-[10px] text-gray-600 mt-1">
                         ID: {order._id}
@@ -219,14 +266,26 @@ export default function OrderVerificationPage() {
                             key={idx}
                             className="flex justify-between text-sm"
                           >
-
                             <span className="text-gray-600 font-mono text-xs">
-                             ID:#{String(item.product_id._id).slice(-8)} | Name: {String(item.product_id.productName)} | Qty:{" "}
+                              ID:#{String(item.product_id._id).slice(-8)} |
+                              Name: {String(item.product_id.productName)} | Qty:{" "}
                               {item.quantity}
                             </span>
-                            <span className="text-gray-900 font-medium">
-                              ₹{item.Price.toLocaleString()}
-                            </span>
+                            <div className="flex items-center gap-1">
+                              <span className="text-gray-600">₹</span>
+                              <input
+                                type="number"
+                                value={item.Price}
+                                onChange={(e) =>
+                                  handlePriceChange(
+                                    order._id,
+                                    item.product_id._id,
+                                    e.target.valueAsNumber,
+                                  )
+                                }
+                                className="w-24 px-2 py-1 border rounded text-right text-black font-medium focus:ring-1 focus:ring-green-500 outline-none"
+                              />
+                            </div>
                           </div>
                         ))}
                       </div>
@@ -239,7 +298,9 @@ export default function OrderVerificationPage() {
                       <div className="flex justify-between items-end">
                         <div>
                           <p className="text-2xl font-bold text-gray-900">
-                            ₹{order.payment?.amount.toLocaleString() || order.totalAmount}  
+                            ₹
+                            {order.payment?.amount.toLocaleString() ||
+                              order.totalAmount}
                           </p>
                         </div>
                         <div className="text-right">
@@ -250,7 +311,8 @@ export default function OrderVerificationPage() {
                                 : "text-orange-600"
                             }`}
                           >
-                            {order.payment?.payment_status.toUpperCase() || "NOT PAID"} 
+                            {order.payment?.payment_status.toUpperCase() ||
+                              "NOT PAID"}
                           </p>
                         </div>
                       </div>
@@ -259,7 +321,12 @@ export default function OrderVerificationPage() {
                           type="number"
                           placeholder="Apply Discount"
                           value={discount[order._id] || ""}
-                          onChange={(e) => handleDiscountChange(order._id,e.target.valueAsNumber)}
+                          onChange={(e) =>
+                            handleDiscountChange(
+                              order._id,
+                              e.target.valueAsNumber,
+                            )
+                          }
                           className="px-4 py-2 placeholder-slate-500
                              text-slate-700
                              border border-slate-300 rounded-lg w-full max-w-sm focus:outline-none focus:ring-2 focus:ring-green-500"
@@ -270,7 +337,13 @@ export default function OrderVerificationPage() {
 
                   <div className="px-6 py-4 bg-gray-50/50 border-t border-gray-100 flex justify-end gap-3">
                     <button
-                      onClick={() => handleApproveOrder(order._id,order.user.email,order.items)}
+                      onClick={() =>
+                        handleApproveOrder(
+                          order._id,
+                          order.user.email,
+                          order.items,
+                        )
+                      }
                       disabled={verifying}
                       className="text-xs
                        font-bold cursor-pointer bg-green-600 hover:bg-green-700 text-white px-6 py-2

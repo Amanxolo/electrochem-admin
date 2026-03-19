@@ -96,12 +96,23 @@ export default function Home() {
           >
             Products
           </Link>
-           <Link
-            href="/userverification"
-            className="text-sm font-medium hover:underline underline-offset-4"
-          >
-            User Verifcation
-          </Link>
+          <div className="flex flex-col gap-1 pointer-cursor">
+            
+            <select
+              name="users"
+              id="users"
+              defaultValue={""}
+              // value={pathname}
+              onChange={(event)=>{router.push(event.target.value)}}
+              className=" border-none w-16 rounded bg-transparent text-sm outline-none focus:ring-2 focus:ring-green-500"
+            >
+              <option value="Orders">Users</option>
+              <option value="/users">All Users</option>
+              
+              <option value="/userverification">User verification</option>
+            </select>
+          </div>
+           
           <Link
             href="/complaints"
             className="text-sm font-medium hover:underline underline-offset-4"
@@ -127,6 +138,7 @@ export default function Home() {
               <option value="Orders">Orders</option>
               <option value="/allorders">All Orders</option>
               <option value="/orderverification">Bulk Orders</option>
+              <option value="/reselleroemOrders">Reseller/OEM Orders</option>
             </select>
           </div>
           <Link

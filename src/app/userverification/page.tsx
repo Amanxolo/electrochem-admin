@@ -201,29 +201,53 @@ export default function UserVerification() {
                         { label: "Aadhar", src: user.documents.aadhar },
                         { label: "PAN", src: user.documents.pan },
                         { label: "GSTIN", src: user.documents.gstin },
-                      ].map(
-                        (doc, i) =>
-                          doc.src && (
+                      ].map((doc, i) => {
+                        // 1. Validation Check: Ensure src is a string and looks like a valid path
+                        // It should start with '/' (local API) or 'http' (external) or 'data:' (base64)
+                        const isImagePath =
+                          typeof doc.src === "string" &&
+                          (doc.src.startsWith("/") ||
+                            doc.src.startsWith("http") ||
+                            doc.src.startsWith("data:"));
+
+                        if (!isImagePath) {
+                          return (
                             <div
                               key={i}
-                              className="group relative aspect-square rounded-lg bg-slate-100 overflow-hidden border border-slate-200 cursor-pointer"
-                              onClick={() => setPreviewImage(doc.src || null)}
+                              className="flex flex-col items-center justify-center aspect-square rounded-lg bg-slate-100 border border-slate-200 p-2"
                             >
-                              <Image
-                                src={doc.src}
-                                alt={doc.label}
-                                fill
-                                className="object-cover group-hover:scale-110 transition-transform"
-                              />
-                              <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
-                                <Eye size={18} className="text-white" />
-                              </div>
-                              <div className="absolute bottom-0 left-0 right-0 bg-white/90 py-1 text-[9px] font-bold text-center text-slate-700">
+                              <span className="text-[10px] font-bold text-slate-400 uppercase text-center mb-1">
                                 {doc.label}
-                              </div>
+                              </span>
+                              <span className="text-[10px] text-slate-500 break-all text-center">
+                                {doc.src || "N/A"}
+                              </span>
                             </div>
-                          ),
-                      )}
+                          );
+                        }
+
+                        return (
+                          <div
+                            key={i}
+                            className="group relative aspect-square rounded-lg bg-slate-100 overflow-hidden border border-slate-200 cursor-pointer"
+                            onClick={() => setPreviewImage(doc.src || null)}
+                          >
+                            <Image
+                              src={doc.src as string}
+                              alt={doc.label}
+                              fill
+                              className="object-cover group-hover:scale-110 transition-transform"
+                              unoptimized 
+                            />
+                            <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
+                              <Eye size={18} className="text-white" />
+                            </div>
+                            <div className="absolute bottom-0 left-0 right-0 bg-white/90 py-1 text-[9px] font-bold text-center text-slate-700">
+                              {doc.label}
+                            </div>
+                          </div>
+                        );
+                      })}
                     </div>
                   </div>
                 </div>
@@ -240,7 +264,8 @@ export default function UserVerification() {
                      disabled:text-slate-500 
                         disabled:cursor-not-allowed"
                   >
-                    <CheckCircle size={16} /> {user.isVerified ? "Verified" : "Verify User"}
+                    <CheckCircle size={16} />{" "}
+                    {user.isVerified ? "Verified" : "Verify User"}
                   </button>
                 </div>
               </div>
