@@ -46,6 +46,7 @@ export default function OrderVerificationPage() {
   const [discount, setDiscount] = useState<Record<string, number>>({});
   const [searchQuery, setSearchQuery] = useState<string>("");
   const [verifying, setVerifying] = useState<boolean>(false);
+  const [liveMessage, setLiveMessage] = useState<string>("");
   useEffect(() => {
     const fetchOrders = async () => {
       try {
@@ -70,24 +71,29 @@ export default function OrderVerificationPage() {
   const handleDiscountChange = (orderId: string, discountValue: number) => {
     setDiscount((prev) => ({ ...prev, [orderId]: discountValue }));
   };
-  const handlePriceChange = (orderId: string, itemId: string, newPrice: number) => {
-    
+  const handlePriceChange = (
+    orderId: string,
+    itemId: string,
+    newPrice: number,
+  ) => {
     setOrders((prevOrders) =>
       prevOrders.map((order) => {
         if (order._id !== orderId) return order;
 
         // Update the specific item price
-        let taxAmount:number=0;
+        let taxAmount: number = 0;
         const updatedItems = order.items.map((item) => {
-        
-          if(item.product_id.productCategory==="charger" || item.product_id.productCategory==="chargers"){
-            if(item.product_id._id === itemId) {
-                taxAmount+=(item.quantity*newPrice*0.05)
-            }else taxAmount+=(item.quantity*item.Price*0.05)
-          }else{
-            if(item.product_id._id === itemId) {
-                taxAmount+=(item.quantity*newPrice*0.18)
-            }else taxAmount+=(item.quantity*item.Price*0.18)
+          if (
+            item.product_id.productCategory === "charger" ||
+            item.product_id.productCategory === "chargers"
+          ) {
+            if (item.product_id._id === itemId) {
+              taxAmount += item.quantity * newPrice * 0.05;
+            } else taxAmount += item.quantity * item.Price * 0.05;
+          } else {
+            if (item.product_id._id === itemId) {
+              taxAmount += item.quantity * newPrice * 0.18;
+            } else taxAmount += item.quantity * item.Price * 0.18;
           }
           if (item.product_id._id === itemId) {
             return { ...item, Price: newPrice };
@@ -98,11 +104,15 @@ export default function OrderVerificationPage() {
         // Recalculate totalAmount based on updated items
         const newTotal = updatedItems.reduce(
           (sum, item) => sum + item.Price * item.quantity,
-          0
+          0,
         );
-        order.totalAmount = newTotal+taxAmount;
-        return { ...order, items: updatedItems, totalAmount: newTotal+taxAmount };
-      })
+        order.totalAmount = newTotal + taxAmount;
+        return {
+          ...order,
+          items: updatedItems,
+          totalAmount: newTotal + taxAmount,
+        };
+      }),
     );
   };
   const handleEmailInvoice = async (
@@ -112,6 +122,7 @@ export default function OrderVerificationPage() {
   ) => {
     try {
       setVerifying(true);
+      setLiveMessage("Sending invoice email...");
       const res = await fetch("/api/sendEmails", {
         method: "POST",
         headers: {
@@ -131,6 +142,7 @@ export default function OrderVerificationPage() {
       toast.error("Error sending invoice email");
     } finally {
       setVerifying(false);
+      setLiveMessage("");
     }
   };
   const handleApproveOrder = async (
@@ -140,6 +152,7 @@ export default function OrderVerificationPage() {
   ) => {
     try {
       setVerifying(true);
+      setLiveMessage("Approving order...");
       const res = await fetch("/api/orders/placeOrderforOEMandReseller", {
         method: "PUT",
         headers: {
@@ -148,9 +161,8 @@ export default function OrderVerificationPage() {
         body: JSON.stringify({
           orderId,
           discount: discount[orderId] || 0,
-          updatedItems:items,
-          email
-
+          updatedItems: items,
+          email,
         }),
       });
 
@@ -165,7 +177,7 @@ export default function OrderVerificationPage() {
           price: item.Price,
           category: item.product_id.productCategory,
         }));
-        handleEmailInvoice(email, itemsForEmails, orderId);
+        await handleEmailInvoice(email, itemsForEmails, orderId);
         return;
       }
       toast.error("Error approving order");
@@ -173,6 +185,7 @@ export default function OrderVerificationPage() {
       toast.error("Error approving order");
     } finally {
       setVerifying(false);
+      setLiveMessage("");
     }
   };
 
@@ -180,6 +193,19 @@ export default function OrderVerificationPage() {
     <div className="p-6 bg-slate-50 min-h-screen">
       <div className="max-w-7xl mx-auto">
         <header className="mb-8">
+          {liveMessage && (
+            <div className="flex mx-80 align-center items-center justify-center bg-emerald-50 border border-emerald-200 w-fit px-4 h-10 rounded-full mt-6 shadow-sm backdrop-blur-sm">
+              <div className="flex items-center gap-3">
+                <div className="relative flex items-center justify-center">
+                  <div className="w-4 h-4 border-2 border-emerald-200 rounded-full"></div>
+                  <div className="absolute w-4 h-4 border-2 border-emerald-600 border-t-transparent rounded-full animate-spin"></div>
+                </div>
+                <span className="text-sm font-semibold text-emerald-800 tracking-wide">
+                  {liveMessage}
+                </span>
+              </div>
+            </div>
+          )}
           <h1 className="text-3xl font-bold text-slate-900 tracking-tight">
             Order Verification
           </h1>

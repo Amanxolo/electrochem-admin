@@ -46,6 +46,7 @@ export default function OrderVerificationPage() {
   const [discount, setDiscount] = useState<Record<string, number>>({});
   const [searchQuery, setSearchQuery] = useState<string>("");
   const [verifying,setVerifying]=useState<boolean>(false);
+  const [liveMessage, setLiveMessage] = useState<string>("");
   useEffect(() => {
     const fetchOrders = async () => {
       try {
@@ -71,6 +72,7 @@ export default function OrderVerificationPage() {
   const handleEmailInvoice=async(email:string,items:IItemsforEmail[],orderId:string)=>{
     try{
         setVerifying(true);
+        setLiveMessage("Sending invoice email...");
         const res=await fetch("/api/sendEmails",{
             method:"POST",
             headers:{
@@ -90,12 +92,14 @@ export default function OrderVerificationPage() {
         toast.error("Error sending invoice email");
     }finally{
         setVerifying(false);
+        setLiveMessage("");
     }
 
   }
   const handleApproveOrder = async (orderId: string,email:string,items:IItems[]) => {
     try{
         setVerifying(true);
+        setLiveMessage("Approving Order and updating stock...");
         const res=await fetch("/api/orders?queryType=approveOrder",{
             method:"PUT",
             headers:{
@@ -117,7 +121,7 @@ export default function OrderVerificationPage() {
               price:item.Price,
               category:item.product_id.productCategory
             }))
-            handleEmailInvoice(email,itemsForEmails,orderId);
+            await handleEmailInvoice(email,itemsForEmails,orderId);
             return;
         }
         toast.error("Error approving order");
@@ -125,6 +129,7 @@ export default function OrderVerificationPage() {
         toast.error("Error approving order");
     }finally{
         setVerifying(false);
+        setLiveMessage("");
     }
 
   };
@@ -133,6 +138,19 @@ export default function OrderVerificationPage() {
     <div className="p-6 bg-slate-50 min-h-screen">
       <div className="max-w-7xl mx-auto">
         <header className="mb-8">
+           {liveMessage && (
+            <div className="flex mx-80 align-center items-center justify-center bg-emerald-50 border border-emerald-200 w-fit px-4 h-10 rounded-full mt-6 shadow-sm backdrop-blur-sm">
+              <div className="flex items-center gap-3">
+                <div className="relative flex items-center justify-center">
+                  <div className="w-4 h-4 border-2 border-emerald-200 rounded-full"></div>
+                  <div className="absolute w-4 h-4 border-2 border-emerald-600 border-t-transparent rounded-full animate-spin"></div>
+                </div>
+                <span className="text-sm font-semibold text-emerald-800 tracking-wide">
+                  {liveMessage}
+                </span>
+              </div>
+            </div>
+          )}
           <h1 className="text-3xl font-bold text-slate-900 tracking-tight">
             Order Verification
           </h1>

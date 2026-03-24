@@ -108,8 +108,16 @@ export async function PUT(req: NextRequest) {
 
       order.payment=payment._id
       await order.save({ session });
-      user.order.push(order._id)
-      await user.save({session})
+      // user.order.push(order._id)
+      // await user.save({session})
+
+      await User.updateOne(
+        { _id: user._id },
+        { $push: { order: order._id } },
+        { session, 
+          runValidators:false
+        },
+      );
 
 
       for (const item of order.items) {
