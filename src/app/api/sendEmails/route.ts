@@ -56,7 +56,13 @@ export async function POST(req: Request) {
 
     const { items, email, orderId, discount } = body;
 
-    // 1. Fetch User & Order in Parallel
+    if (!items || items.length === 0) {
+      return NextResponse.json(
+        { message: "Cart is empty. Cannot generate invoice." },
+        { status: 400 },
+      );
+    }
+
     const [user, order] = await Promise.all([
       User.findOne({ email }),
       Order.findById(orderId)
@@ -67,6 +73,9 @@ export async function POST(req: Request) {
     }
 
     
+    if(!fs.existsSync(templatePath) || !fs.existsSync(logoPath)){
+      throw new Error("Required template or logo files are missing.");
+    }
     if (!cachedTemplate) {
       cachedTemplate = fs.readFileSync(templatePath, "utf8");
     }
@@ -83,7 +92,7 @@ export async function POST(req: Request) {
     let sgst:number = 0, cgst:number = 0, igst:number = 0, subtotal:number = 0;
 
     for (const item of items) {
-      const itemSubtotal = item.quantity * item.price;
+      const itemSubtotal:number = item.quantity * item.price;
       const isCharger = ["charger", "chargers"].includes(item.category.toLowerCase().trim());
 
       if (isUP) {
@@ -160,7 +169,7 @@ export async function POST(req: Request) {
     // 6. Send Email
     const {data:emailResult, error: emailError } = await resend.emails.send({
       from: "sales@electrochembattery.com",
-      to: "bhardwajashish701@gmail.com",
+      to: email,
       subject: `Proforma Invoice ${piNumber} - ElectroChem`,
       html: `<p>Dear ${user.name},</p><p>Please find attached your Proforma Invoice <strong>${piNumber}</strong>.</p>`,
       attachments: [{ content: Buffer.from(pdfBuffer), filename: `${piNumber}.pdf` }],
