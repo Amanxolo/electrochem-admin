@@ -85,7 +85,7 @@ export async function POST(req: Request) {
     }
 
     // 3. GST & Tax Logic
-    const primaryAddress = user?.addresses?.[0];
+    const primaryAddress = order.shippingAddress;
     const userState = primaryAddress?.state?.toLowerCase().trim() || "";
     const isUP = userState === "uttar pradesh" || userState === "up";
 
@@ -169,7 +169,7 @@ export async function POST(req: Request) {
     // 6. Send Email
     const {data:emailResult, error: emailError } = await resend.emails.send({
       from: "sales@electrochembattery.com",
-      to: email,
+      to: "bhardwajashish601@gmail.com",
       subject: `Proforma Invoice ${piNumber} - ElectroChem`,
       html: `<p>Dear ${user.name},</p><p>Please find attached your Proforma Invoice <strong>${piNumber}</strong>.</p>`,
       attachments: [{ content: Buffer.from(pdfBuffer), filename: `${piNumber}.pdf` }],

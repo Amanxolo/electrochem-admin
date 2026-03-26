@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { toast } from "sonner";
+import { Address } from "../../../models/user";
 interface IItems {
   product_id: {
     _id: string;
@@ -39,6 +40,7 @@ interface IOrder {
   payment?: IPayment;
   items: IItems[];
   isEmailSent: boolean;
+  shippingAddress:Address
 }
 export default function OrderVerificationPage() {
   const [orders, setOrders] = useState<IOrder[]>([]);
@@ -263,6 +265,28 @@ export default function OrderVerificationPage() {
                         <p className="text-xs text-gray-600">
                           {order.user.email}
                         </p>
+
+                        <div className="w-[85%] md:w-[250px] flex-shrink-0 p-4 border rounded-lg bg-white mt-2 ">
+                          <div className="flex justify-between items-start mb-2">
+                            <span className="px-2 py-1 text-xs font-semibold uppercase rounded bg-gray-100 text-gray-600">
+                              {order.shippingAddress.type}
+                            </span>
+                          </div>
+                          <p className="text-sm text-green-600/70 font-medium">
+                            {order.shippingAddress.street}
+                          </p>
+                          <p className="text-sm text-gray-600">
+                            {order.shippingAddress.city},{" "}
+                            {order.shippingAddress.state} -{" "}
+                            {order.shippingAddress.zipCode}
+                          </p>
+                          <p className="text-sm text-gray-600">
+                            {order.shippingAddress.country}
+                          </p>
+                          <p className="text-sm text-black mt-2 font-mono">
+                            {order.shippingAddress.phone}
+                          </p>
+                        </div>
                       </div>
                     </div>
                     <div className="text-right">

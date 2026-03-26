@@ -1,5 +1,6 @@
 "use client";
 import { useState, useEffect, useMemo } from "react";
+import { Address } from "../../../models/user";
 import { toast } from "sonner";
 import {
   Search,
@@ -8,10 +9,8 @@ import {
   Package,
   Clock,
   User,
-  Filter,
   AlertCircle,
 } from "lucide-react";
-
 
 // --- Interfaces ---
 interface IPayment {
@@ -51,6 +50,7 @@ interface IOrder {
     | "cancelled";
   createdAt: string;
   payment: IPayment;
+  shippingAddress: Address;
   items: IItems[];
 }
 
@@ -66,7 +66,7 @@ export default function AllOrdersPage() {
   const fetchOrders = async (idSearch?: string) => {
     try {
       setLoading(true);
-      
+
       const endpoint = idSearch
         ? `/api/orders?queryType=orderById&id=${idSearch.trim()}`
         : `/api/orders?queryType=allOrders`;
@@ -108,7 +108,7 @@ export default function AllOrdersPage() {
         body: JSON.stringify({ orderId, status: newStatus }),
       });
       if (res.ok) {
-        const data=await res.json();
+        const data = await res.json();
         toast.success(data.message || "Order Status Updated ");
         setOrders((prev) =>
           prev.map((o) =>
@@ -130,7 +130,6 @@ export default function AllOrdersPage() {
     if (statusFilter !== "all")
       filtered = filtered.filter((o) => o.status === statusFilter);
 
-    
     if (searchQuery && searchQuery.length < 15) {
       filtered = filtered.filter(
         (o) =>
@@ -146,6 +145,23 @@ export default function AllOrdersPage() {
     currentPage * itemsPerPage,
   );
 
+  const userTypeStyles = {
+  individual: {
+    bg: "bg-blue-200",
+    text: "text-blue-700",
+    border: "border-blue-300",
+  },
+  reseller: {
+    bg: "bg-purple-200",
+    text: "text-purple-700",
+    border: "border-purple-300",
+  },
+  oem: {
+    bg: "bg-amber-200",
+    text: "text-amber-700",
+    border: "border-amber-300",
+  },
+};
   return (
     <div className="p-6 bg-[#f8fafc] min-h-screen">
       <div className="max-w-7xl mx-auto">
@@ -212,7 +228,7 @@ export default function AllOrdersPage() {
             <h3 className="text-lg font-bold text-green-900">
               No Orders Found
             </h3>
-            
+
             <button
               onClick={() => {
                 setSearchQuery("");
@@ -227,6 +243,7 @@ export default function AllOrdersPage() {
         ) : (
           <div className="space-y-6">
             {currentOrders.map((order) => (
+                
               <div
                 key={order._id}
                 className="bg-white border border-green-50 rounded-xl overflow-hidden shadow-sm hover:shadow-md transition-shadow "
@@ -283,18 +300,39 @@ export default function AllOrdersPage() {
                         <User size={20} />
                       </div>
                       <div>
-                        
                         <p className="text-sm font-bold text-green-900">
                           {order.user.name}
                         </p>
                         <p className="text-sm text-green-600/70 font-medium">
                           {order.user.email}
                         </p>
-                        <p className="text-sm text-green-600/70 font-medium">
-                          {order.user.userType}
+                        <p className={`w-28 px-2 m-[4px] text-sm font-bold border-2 rounded-[8px] ${userTypeStyles[order.user.userType].bg } ${userTypeStyles[order.user.userType].border} ${userTypeStyles[order.user.userType].text}  text font-medium`}>
+                          {order.user.userType.toUpperCase()}
                         </p>
+                        <div className="w-[85%] md:w-[250px] flex-shrink-0 p-4 border rounded-lg bg-white ">
+                          <div className="flex justify-between items-start mb-2">
+                            <span className="px-2 py-1 text-xs font-semibold uppercase rounded bg-gray-100 text-gray-600">
+                              {order.shippingAddress.type}
+                            </span>
+                          </div>
+                          <p className="text-sm text-green-600/70 font-medium">
+                            {order.shippingAddress.street}
+                          </p>
+                          <p className="text-sm text-gray-600">
+                            {order.shippingAddress.city},{" "}
+                            {order.shippingAddress.state} -{" "}
+                            {order.shippingAddress.zipCode}
+                          </p>
+                          <p className="text-sm text-gray-600">
+                            {order.shippingAddress.country}
+                          </p>
+                          <p className="text-sm text-black mt-2 font-mono">
+                            {order.shippingAddress.phone}
+                          </p>
+                        </div>
                       </div>
                     </div>
+
                     <div>
                       <h4 className="text-[10px] font-bold text-green-400 uppercase tracking-widest mb-1">
                         Total Payment
@@ -324,10 +362,9 @@ export default function AllOrdersPage() {
                             <span className="text-[13px] font-bold text-green-900">
                               {item.product_id.productName}
                               <span className="text-[12px] text-green-600 font-mono">
-                                ({item.product_id._id}) 
+                                ({item.product_id._id})
+                              </span>
                             </span>
-                            </span>
-                            
                           </div>
                           <div className="flex items-center">
                             <div className="text-right">

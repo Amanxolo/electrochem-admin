@@ -54,7 +54,7 @@ export async function GET(req: NextRequest) {
             select: "productName productCategory",
           })
           .select(
-            "_id user totalAmount status createdAt payment items.product_id items.quantity items.Price isEmailSent",
+            "_id user totalAmount shippingAddress status createdAt payment items.product_id items.quantity items.Price isEmailSent",
           );
 
         if (!singleOrder) {
@@ -89,7 +89,7 @@ export async function GET(req: NextRequest) {
             select: "productName productCategory",
           })
           .select(
-            "_id user totalAmount status createdAt payment items.product_id items.quantity items.Price isEmailSent ",
+            "_id user totalAmount status createdAt payment items.product_id items.quantity items.Price isEmailSent shippingAddress ",
           )
           .sort({ createdAt: -1 });
         if (!allPlacedOrders) {
@@ -121,7 +121,7 @@ export async function GET(req: NextRequest) {
             select: "productName productCategory",
           })
           .select(
-            "_id user totalAmount status createdAt payment items.product_id items.quantity items.Price isEmailSent ",
+            "_id user shippingAddress totalAmount status createdAt payment items.product_id items.quantity items.Price isEmailSent ",
           );
         orders = allOrders.filter((order) => order.user !== null);
         if (!allOrders) {
@@ -153,7 +153,7 @@ export async function GET(req: NextRequest) {
             select: "productName productCategory",
           })
           .select(
-            "_id user totalAmount status createdAt payment items.product_id items.quantity items.Price isEmailSent ",
+            "_id user shippingAddress totalAmount status createdAt payment items.product_id items.quantity items.Price isEmailSent ",
           )
           .lean();
 
