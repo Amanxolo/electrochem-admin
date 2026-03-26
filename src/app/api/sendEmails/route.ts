@@ -137,7 +137,7 @@ export async function POST(req: Request) {
       .replace(/{{piNumber}}/g, piNumber)
       .replace(/{{issueDate}}/g, now.toLocaleDateString())
       .replace(/{{validUntil}}/g, validUntil)
-      .replace(/{{customerName}}/g, (user as any).companyName || user.name || "Valued Customer")
+      .replace(/{{customerName}}/g, (user as { companyName?: string; name: string }).companyName || user.name || "Valued Customer")
       .replace(/{{customerAddress}}/g, `${primaryAddress?.street}, ${primaryAddress?.city}, ${primaryAddress?.state}`)
       .replace(/{{customerPhone}}/g, primaryAddress?.phone || "N/A")
       .replace(/{{customerGSTIN}}/g, user.documents?.gstin || "URD")
@@ -153,9 +153,26 @@ export async function POST(req: Request) {
 
     // 5. PDF Generation
     const binPath=path.join(process.cwd(),'node_modules/@sparticuz/chromium/bin')
+
+    const devChromePaths = [
+      "C:\\Program Files\\Google\\Chrome\\Application\\chrome.exe",
+      "C:\\Program Files (x86)\\Google\\Chrome\\Application\\chrome.exe",
+      "/usr/bin/google-chrome",
+      "/usr/bin/chromium-browser",
+      "/Applications/Google Chrome.app/Contents/MacOS/Google Chrome",
+    ];
+
+    let devExecutablePath: string | undefined = undefined;
+    if (!isProduction) {
+      const fs2 = await import("fs");
+      devExecutablePath = devChromePaths.find((p) => fs2.existsSync(p));
+    }
+
     browser = await puppeteer.launch({
       args: isProduction ? chromium.args : ["--no-sandbox", "--disable-setuid-sandbox"],
-      executablePath: isProduction ? await chromium.executablePath(binPath) : undefined,
+      executablePath: isProduction
+        ? await chromium.executablePath(binPath)
+        : devExecutablePath,
       headless: true,
     });
 
@@ -171,7 +188,7 @@ export async function POST(req: Request) {
     // 6. Send Email
     const {data:emailResult, error: emailError } = await resend.emails.send({
       from: "sales@electrochembattery.com",
-      to: "sagar6203620715@gmail.com",
+      to: email,
       subject: `Proforma Invoice ${piNumber} - ElectroChem`,
       html: `<p>Dear ${user.name},</p><p>Please find attached your Proforma Invoice <strong>${piNumber}</strong>.</p>`,
       attachments: [{ content: Buffer.from(pdfBuffer), filename: `${piNumber}.pdf` }],
