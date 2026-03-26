@@ -24,11 +24,12 @@ export async function PUT(req: NextRequest) {
   try {
     await dbConnect();
     const body = await req.json();
-    const { orderId, discount, updatedItems ,email} = body as {
+    const { orderId, discount, updatedItems, email, shippingCost } = body as {
       orderId: string;
       discount: number;
       updatedItems: IItems[];
-      email:string
+      email: string;
+      shippingCost?: number;
     };
     const order = await Order.findById(orderId);
     if (!order) {
@@ -94,7 +95,7 @@ export async function PUT(req: NextRequest) {
 
       let newTotalAmount: number = subTotalAmount + taxAmount;
 
-      newTotalAmount = Math.max(0, newTotalAmount - discount);
+      newTotalAmount = Math.max(0, newTotalAmount - discount + (shippingCost || 0));
       order.totalAmount = newTotalAmount;
       order.status = "pending";
       const paymentPayload: IPayment = {

@@ -52,9 +52,10 @@ export async function POST(req: Request) {
       email: string;
       orderId: string;
       discount: number;
+      shippingCost?: number;
     };
 
-    const { items, email, orderId, discount } = body;
+    const { items, email, orderId, discount, shippingCost } = body;
 
     if (!items || items.length === 0) {
       return NextResponse.json(
@@ -106,7 +107,7 @@ export async function POST(req: Request) {
       subtotal += itemSubtotal;
     }
 
-    const totalAmount = subtotal + cgst + sgst + igst - (discount || 0);
+    const totalAmount = subtotal + cgst + sgst + igst - (discount || 0) + (shippingCost || 0);
 
     
     const now = new Date();
@@ -136,13 +137,14 @@ export async function POST(req: Request) {
       .replace(/{{piNumber}}/g, piNumber)
       .replace(/{{issueDate}}/g, now.toLocaleDateString())
       .replace(/{{validUntil}}/g, validUntil)
-      .replace(/{{customerName}}/g, user.name || "Valued Customer")
+      .replace(/{{customerName}}/g, (user as any).companyName || user.name || "Valued Customer")
       .replace(/{{customerAddress}}/g, `${primaryAddress?.street}, ${primaryAddress?.city}, ${primaryAddress?.state}`)
       .replace(/{{customerPhone}}/g, primaryAddress?.phone || "N/A")
       .replace(/{{customerGSTIN}}/g, user.documents?.gstin || "URD")
       .replace(/{{customerState}}/g, primaryAddress?.state || "N/A")
       .replace(/{{subtotal}}/g, subtotal.toFixed(2))
       .replace(/{{discount}}/g, (discount || 0).toFixed(2))
+      .replace(/{{shippingCost}}/g, (shippingCost || 0).toFixed(2))
       .replace(/{{cgstAmount}}/g, cgst.toFixed(2))
       .replace(/{{sgstAmount}}/g, sgst.toFixed(2))
       .replace(/{{igstAmount}}/g, igst.toFixed(2))
@@ -169,7 +171,7 @@ export async function POST(req: Request) {
     // 6. Send Email
     const {data:emailResult, error: emailError } = await resend.emails.send({
       from: "sales@electrochembattery.com",
-      to: email,
+      to: "sagar6203620715@gmail.com",
       subject: `Proforma Invoice ${piNumber} - ElectroChem`,
       html: `<p>Dear ${user.name},</p><p>Please find attached your Proforma Invoice <strong>${piNumber}</strong>.</p>`,
       attachments: [{ content: Buffer.from(pdfBuffer), filename: `${piNumber}.pdf` }],
