@@ -174,7 +174,7 @@ const ProformaInvoice = ({ params }: { params: Promise<{ id: string }> }) => {
       });
       if (res.ok) {
         toast.success("Invoice email sent successfully");
-        router.push("/unverifiedOrders");
+        router.push("/unVerifiedOrders");
       }
     } catch (error) {
       toast.error("Error sending invoice email");
