@@ -1,14 +1,16 @@
 "use client";
 import React, { useState, useEffect } from 'react';
 import * as XLSX from 'xlsx';
-import { Download, Search, Loader2 } from 'lucide-react';
+import { Download, Search, Loader2, Building2 } from 'lucide-react';
 import { toast } from 'sonner';
+import Link from 'next/link';
 
 interface UserData {
   _id: string;
   name: string;
   email: string;
   userType: "individual" | "reseller" | "oem";
+  companyName?: string;
   totalOrders: number;
   addresses: { phone: string }[];
 }
@@ -42,14 +44,16 @@ export default function UsersAdminPage() {
   
   const filteredUsers = allOrders.filter(user => 
     user.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    user.email.toLowerCase().includes(searchTerm.toLowerCase())
+    user.email.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    (user.companyName && user.companyName.toLowerCase().includes(searchTerm.toLowerCase()))
   );
 
   const exportToExcel = () => {
     if (filteredUsers.length === 0) return toast.error("No data to export");
 
     const worksheetData = filteredUsers.map((user) => ({
-      "Name": user.name,
+      "Company Name": user.companyName || "—",
+      "Contact Name": user.name,
       "Email": user.email,
       "Phone": user.addresses?.[0]?.phone || "N/A",
       "User Type": user.userType?.toUpperCase(),
@@ -87,8 +91,8 @@ export default function UsersAdminPage() {
           <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" size={20} />
           <input 
             type="text"
-            placeholder="Search by name or email..."
-            className="w-full pl-12 pr-4 py-3 bg-white border border-slate-200 rounded-xl focus:ring-2 focus:ring-green-500 outline-none shadow-sm"
+            placeholder="Search by company, name or email..."
+            className="w-full pl-12 pr-4 py-3 bg-white border border-slate-200 rounded-xl focus:ring-2 focus:ring-green-500 outline-none shadow-sm text-black"
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
           />
@@ -104,7 +108,8 @@ export default function UsersAdminPage() {
             <table className="w-full text-left border-collapse">
               <thead>
                 <tr className="bg-slate-50 border-b border-slate-200">
-                  <th className="px-6 py-4 text-xs font-bold text-slate-400 uppercase tracking-wider">Name</th>
+                  <th className="px-6 py-4 text-xs font-bold text-slate-400 uppercase tracking-wider">Company</th>
+                  <th className="px-6 py-4 text-xs font-bold text-slate-400 uppercase tracking-wider">Contact Name</th>
                   <th className="px-6 py-4 text-xs font-bold text-slate-400 uppercase tracking-wider">Email</th>
                   <th className="px-6 py-4 text-xs font-bold text-slate-400 uppercase tracking-wider">Phone</th>
                   <th className="px-6 py-4 text-xs font-bold text-slate-400 uppercase tracking-wider">Type</th>
@@ -114,6 +119,19 @@ export default function UsersAdminPage() {
               <tbody className="divide-y divide-slate-100">
                 {filteredUsers.map((user) => (
                   <tr key={user._id} className="hover:bg-slate-50/50 transition-colors">
+                    <td className="px-6 py-4">
+                      {user.companyName ? (
+                        <Link
+                          href={`/users/${user._id}`}
+                          className="flex items-center gap-2 font-semibold text-green-700 hover:text-green-900 hover:underline"
+                        >
+                          <Building2 size={15} className="flex-shrink-0" />
+                          {user.companyName}
+                        </Link>
+                      ) : (
+                        <span className="text-slate-400">—</span>
+                      )}
+                    </td>
                     <td className="px-6 py-4 font-semibold text-slate-800">{user.name}</td>
                     <td className="px-6 py-4 text-slate-600">{user.email}</td>
                     <td className="px-6 py-4 text-slate-600">

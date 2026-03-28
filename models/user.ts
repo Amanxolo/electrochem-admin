@@ -77,6 +77,7 @@ export interface IUser extends Document {
   email: string
   password: string
   userType: 'individual' | 'reseller' | 'oem'
+  companyName?: string
   isVerified?:Boolean
   addresses: Address[]
   order: Types.ObjectId[]
@@ -90,6 +91,7 @@ const userSchema = new Schema<IUser>({
   email: { type: String, required: true, unique: true },
   password: { type: String, required: true },
   isVerified:{type:Boolean ,default:false},
+  companyName: { type: String, required: false },
   userType: { type: String, enum: ['individual', 'reseller', 'oem'], required: true, default: 'individual' },
   addresses: { type: [addressSchema], default: [] },
   order: { type: [{type:Schema.Types.ObjectId}], ref: 'Order', default: [] },

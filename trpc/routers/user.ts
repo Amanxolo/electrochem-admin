@@ -14,6 +14,8 @@ export const userRouter = t.router({
     .input(
       z.object({
         name: z.string(),
+        companyName: z.string().optional(),
+        userType: z.enum(["individual", "reseller", "oem"]).optional(),
         email: z.email(),
         password: z.string().min(6),
         confirmPassword: z.string().min(6),
@@ -52,6 +54,8 @@ export const userRouter = t.router({
 
       const newUser = await User.create({
         name: input.name,
+        companyName: input.companyName,
+        userType: input.userType || "individual",
         email: input.email,
         password: hashedPassword,
         addresses: input.addresses,

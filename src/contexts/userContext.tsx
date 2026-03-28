@@ -44,7 +44,7 @@ export function UserProvider({ children }: { children: React.ReactNode }) {
       };
       verifyToken();
     } else setIsLoading(false);
-  }, [token]);
+  }, [token, router]);
 
   const login = (newToken: string) => {
     localStorage.setItem("token", newToken);

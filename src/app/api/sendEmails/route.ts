@@ -160,7 +160,7 @@ export async function POST(req: Request) {
       .replace(/{{paymentMode}}/g, otherData.paymentMode)
       .replace(/{{dispatch}}/g, otherData.dispatchThru)
       .replace(/{{termsOfDelivery}}/g, otherData.termOfDelivery)
-      .replace(/{{customerName}}/g, user.name || "Valued Customer")
+      .replace(/{{customerName}}/g, (user as { companyName?: string; name: string }).companyName || user.name || "Valued Customer")
       .replace(
         /{{customerAddress}}/g,
         `${primaryAddress?.street}, ${primaryAddress?.city}, ${primaryAddress?.state}`,
