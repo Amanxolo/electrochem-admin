@@ -68,7 +68,7 @@ export default function AllOrdersPage() {
       setLoading(true);
 
       const endpoint = idSearch
-        ? `/api/orders?queryType=orderById&id=${idSearch.trim()}`
+        ? `/api/orders?queryType=allOrders&emailId=${idSearch.trim()}`
         : `/api/orders?queryType=allOrders`;
 
       const res = await fetch(endpoint);
@@ -180,7 +180,7 @@ export default function AllOrdersPage() {
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-green-500 h-4 w-4" />
               <input
                 type="text"
-                placeholder="Search Email or Order ID..."
+                placeholder="Search by Email ID..."
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
                 className="pl-10 pr-4 py-2 placeholder:text-slate-600 bg-white border border-green-100 rounded-lg text-sm text-black w-72 focus:ring-2 focus:ring-green-500 focus:border-green-500 outline-none transition-all"

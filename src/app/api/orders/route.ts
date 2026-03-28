@@ -1,12 +1,28 @@
 import { NextRequest, NextResponse } from "next/server";
 import { dbConnect } from "../../../../models/dbconnect";
 import { Order } from "../../../../models/order";
-import { User, OrderItem } from "../../../../models/user";
+import { Address,User, OrderItem } from "../../../../models/user";
 import { Payment, IPayment } from "../../../../models/payment";
 import { Product } from "../../../../models/product";
-import { UserPrice } from "../../../../models/userprice";
+import { Types } from "mongoose";
+import {UserPrice,IUserPrice,} from "../../../../models/userprice";
+
 import mongoose from "mongoose";
 
+export interface IPopulatedUser {
+  _id: Types.ObjectId | string;
+  name: string;
+  email: string;
+  userType: "reseller" | "oem" | "individual";
+}
+
+export interface IPopulatedPayment {
+  _id: Types.ObjectId | string;
+  amount: number;
+  payment_mode: string;
+  payment_status: string;
+
+}
 interface IProduct {
   _id: mongoose.Types.ObjectId | string;
   productName: string;
@@ -21,12 +37,25 @@ export interface ICustomPrice {
   product_id: mongoose.Types.ObjectId | string;
   price: number;
 }
+export interface IOrder {
+  _id: Types.ObjectId | string;
+  user: IPopulatedUser;
+  totalAmount: number;
+  shippingAddress: Address;
+  billingAddress: Address;
+  status: 'not-verified' | 'pending' | 'placed' | 'processing' | 'shipped' | 'delivered' | 'cancelled';
+  createdAt: string | Date;
+  payment?: IPopulatedPayment;
+  items: IItems[];
+  isEmailSent: boolean;
+}
 export async function GET(req: NextRequest) {
   try {
     await dbConnect();
     const url = new URL(req.url);
     const queryType: string | null = url.searchParams.get("queryType");
     let orders;
+    let userEmailId:string | null
     switch (queryType) {
       case "orderById":
         const orderId = url.searchParams.get("id");
@@ -54,8 +83,8 @@ export async function GET(req: NextRequest) {
             select: "productName productCategory",
           })
           .select(
-            "_id user totalAmount shippingAddress status createdAt payment items.product_id items.quantity items.Price isEmailSent",
-          );
+            "_id user totalAmount shippingAddress billingAddress status createdAt payment items.product_id items.quantity items.Price isEmailSent",
+          ).lean<IOrder>();
 
         if (!singleOrder) {
           return NextResponse.json(
@@ -63,13 +92,51 @@ export async function GET(req: NextRequest) {
             { status: 401 },
           );
         }
+        // console.log(singleOrder)
+        const userId = singleOrder.user._id;
 
+        const userPriceDoc = await UserPrice.findOne({
+          user: userId,
+        }).lean<IUserPrice>(); 
+       
+        const userPriceMapItem = new Map();
+        if (userPriceDoc && userPriceDoc.customPrices) {
+          userPriceDoc.customPrices.forEach((cp:ICustomPrice) => {
+            userPriceMapItem.set(cp.product_id.toString(), cp.price);
+          });
+        }
+        let newSubTotal:number = 0;
+        let taxAmount:number = 0;
+
+        for (const item of singleOrder.items) {
+          const productId = item.product_id._id.toString();
+
+          
+          if (userPriceMapItem.has(productId)) {
+            item.Price = userPriceMapItem.get(productId);
+          }
+
+          const lineTotal:number = item.Price * item.quantity;
+          newSubTotal += lineTotal;
+
+          const category = item.product_id.productCategory.toLowerCase().trim();
+          
+          const isCharger = category === "charger" || category === "chargers";
+
+          // Calculate tax based on category (5% for chargers, 18% for others)
+          taxAmount += isCharger ? lineTotal * 0.05 : lineTotal * 0.18;
+        }
+
+        
+        singleOrder.totalAmount = newSubTotal + taxAmount;
         return NextResponse.json(
           { allPlacedOrders: [singleOrder] },
           { status: 200 },
         );
       case "allOrders":
-        const allPlacedOrders = await Order.find({
+        userEmailId=url.searchParams.get("emailId")
+    
+        const allOrders = await Order.find({
           user: { $exists: true },
           payment: { $exists: true },
         })
@@ -77,6 +144,7 @@ export async function GET(req: NextRequest) {
             path: "user",
             model: User,
             select: "name email userType",
+            match:userEmailId?{email:userEmailId}:{}
           })
           .populate({
             path: "payment",
@@ -92,47 +160,49 @@ export async function GET(req: NextRequest) {
             "_id user totalAmount status createdAt payment items.product_id items.quantity items.Price isEmailSent shippingAddress ",
           )
           .sort({ createdAt: -1 });
-        if (!allPlacedOrders) {
-          return NextResponse.json(
-            { message: "Error finding Orders" },
-            { status: 401 },
-          );
-        }
-        return NextResponse.json({ allPlacedOrders }, { status: 200 });
-      case "forVerification":
-        const allOrders = await Order.find({
-          status: "not-verified",
-          user: { $exists: true },
-        })
-          .populate({
-            path: "user",
-            model: User,
-            select: "name email userType",
-            match: { userType: { $in: ["individual"] } },
-          })
-          .populate({
-            path: "payment",
-            model: Payment,
-            select: "amount payment_mode payment_status",
-          })
-          .populate({
-            path: "items.product_id",
-            model: Product,
-            select: "productName productCategory",
-          })
-          .select(
-            "_id user shippingAddress totalAmount status createdAt payment items.product_id items.quantity items.Price isEmailSent ",
-          );
-        orders = allOrders.filter((order) => order.user !== null);
         if (!allOrders) {
           return NextResponse.json(
             { message: "Error finding Orders" },
             { status: 401 },
           );
         }
-        return NextResponse.json({ orders }, { status: 200 });
-      case "ordersFromOEMandReseller":
-        const ordersFromOemAndReseller = await Order.find({
+        const allPlacedOrders=allOrders.filter((order)=>order.user!==null)
+        return NextResponse.json({ allPlacedOrders }, { status: 200 });
+      // case "forVerification":
+      //   const allOrders = await Order.find({
+      //     status: "not-verified",
+      //     user: { $exists: true },
+      //   })
+      //     .populate({
+      //       path: "user",
+      //       model: User,
+      //       select: "name email userType",
+      //       match: { userType: { $in: ["individual"] } },
+      //     })
+      //     .populate({
+      //       path: "payment",
+      //       model: Payment,
+      //       select: "amount payment_mode payment_status",
+      //     })
+      //     .populate({
+      //       path: "items.product_id",
+      //       model: Product,
+      //       select: "productName productCategory",
+      //     })
+      //     .select(
+      //       "_id user shippingAddress totalAmount status createdAt payment items.product_id items.quantity items.Price isEmailSent ",
+      //     );
+      //   orders = allOrders.filter((order) => order.user !== null);
+      //   if (!allOrders) {
+      //     return NextResponse.json(
+      //       { message: "Error finding Orders" },
+      //       { status: 401 },
+      //     );
+      //   }
+      //   return NextResponse.json({ orders }, { status: 200 });
+      case "unVerifiedOrders":
+        userEmailId=url.searchParams.get("emailId")
+        const unVerifiedOrders = await Order.find({
           status: "not-verified",
           user: { $exists: true },
         })
@@ -140,7 +210,8 @@ export async function GET(req: NextRequest) {
             path: "user",
             model: User,
             select: "name email userType",
-            match: { userType: { $in: ["reseller", "oem"] } },
+            match: userEmailId?{email:userEmailId}:{},
+            
           })
           .populate({
             path: "payment",
@@ -157,10 +228,10 @@ export async function GET(req: NextRequest) {
           )
           .lean();
 
-        orders = ordersFromOemAndReseller.filter(
+        orders = unVerifiedOrders.filter(
           (order) => order.user !== null,
         );
-        if (!ordersFromOemAndReseller) {
+        if (!unVerifiedOrders) {
           return NextResponse.json(
             { message: "Error finding Orders" },
             { status: 401 },

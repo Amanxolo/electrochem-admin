@@ -137,8 +137,8 @@ export default function Home() {
             >
               <option value="Orders">Orders</option>
               <option value="/allorders">All Orders</option>
-              <option value="/orderverification">Bulk Orders</option>
-              <option value="/reselleroemOrders">Reseller/OEM Orders</option>
+              {/* <option value="/orderverification">Bulk Orders</option> */}
+              <option value="/unVerifiedOrders">Un-Verified Orders</option>
             </select>
           </div>
           <Link
