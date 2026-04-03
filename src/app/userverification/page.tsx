@@ -90,8 +90,8 @@ export default function UserVerification() {
       const data = await res.json();
       if (!res.ok) throw new Error(data.message || "User not found");
       setUsers(data.user || []);
-    } catch (error: any) {
-      toast.error(error.message);
+    } catch (error) {
+      toast.error("Error fetching user by email");
     } finally {
       setLoading(false);
     }
