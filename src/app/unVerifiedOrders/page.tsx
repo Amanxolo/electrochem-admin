@@ -2,6 +2,8 @@
 
 import { useState, useEffect } from "react";
 import { toast } from "sonner";
+import { Address } from "../../../models/user";
+import { useRouter } from "next/navigation";
 interface IItems {
   product_id: {
     _id: string;
@@ -11,13 +13,7 @@ interface IItems {
   quantity: number;
   Price: number;
 }
-interface IItemsforEmail {
-  id?: string;
-  productName: string;
-  quantity: number;
-  price: number;
-  category: string;
-}
+
 interface IPayment {
   _id: string;
   amount: number;
@@ -39,20 +35,39 @@ interface IOrder {
   payment?: IPayment;
   items: IItems[];
   isEmailSent: boolean;
+  shippingAddress: Address;
 }
 export default function OrderVerificationPage() {
   const [orders, setOrders] = useState<IOrder[]>([]);
   const [loading, setLoading] = useState<boolean>(false);
-  const [discount, setDiscount] = useState<Record<string, number>>({});
+
   const [searchQuery, setSearchQuery] = useState<string>("");
-  const [verifying, setVerifying] = useState<boolean>(false);
-  const [liveMessage, setLiveMessage] = useState<string>("");
+
+  const router = useRouter();
+  const handleFindUserByEmail=async()=>{
+
+    try{
+      setLoading(true)
+      const res=await fetch(`/api/orders?queryType=unVerifiedOrders&emailId=${searchQuery}`)
+      if(!res.ok){
+        toast.error("Error fetching orders for verification")
+        return;
+      }
+      const data = await res.json();
+      setOrders(data.orders);
+
+    }catch(error){
+        toast.error("Error finding the Order.")
+    }finally{
+      setLoading(false)
+    }
+  }
   useEffect(() => {
     const fetchOrders = async () => {
       try {
         setLoading(true);
         const res = await fetch(
-          "/api/orders?queryType=ordersFromOEMandReseller",
+          "/api/orders?queryType=unVerifiedOrders",
         );
         if (!res.ok) {
           toast.error("Error fetching orders for verification");
@@ -68,144 +83,15 @@ export default function OrderVerificationPage() {
     };
     fetchOrders();
   }, []);
-  const handleDiscountChange = (orderId: string, discountValue: number) => {
-    setDiscount((prev) => ({ ...prev, [orderId]: discountValue }));
-  };
-  const handlePriceChange = (
-    orderId: string,
-    itemId: string,
-    newPrice: number,
-  ) => {
-    setOrders((prevOrders) =>
-      prevOrders.map((order) => {
-        if (order._id !== orderId) return order;
 
-        // Update the specific item price
-        let taxAmount: number = 0;
-        const updatedItems = order.items.map((item) => {
-          if (
-            item.product_id.productCategory === "charger" ||
-            item.product_id.productCategory === "chargers"
-          ) {
-            if (item.product_id._id === itemId) {
-              taxAmount += item.quantity * newPrice * 0.05;
-            } else taxAmount += item.quantity * item.Price * 0.05;
-          } else {
-            if (item.product_id._id === itemId) {
-              taxAmount += item.quantity * newPrice * 0.18;
-            } else taxAmount += item.quantity * item.Price * 0.18;
-          }
-          if (item.product_id._id === itemId) {
-            return { ...item, Price: newPrice };
-          }
-          return item;
-        });
-
-        // Recalculate totalAmount based on updated items
-        const newTotal = updatedItems.reduce(
-          (sum, item) => sum + item.Price * item.quantity,
-          0,
-        );
-        order.totalAmount = newTotal + taxAmount;
-        return {
-          ...order,
-          items: updatedItems,
-          totalAmount: newTotal + taxAmount,
-        };
-      }),
-    );
-  };
-  const handleEmailInvoice = async (
-    email: string,
-    items: IItemsforEmail[],
-    orderId: string,
-  ) => {
-    try {
-      setVerifying(true);
-      setLiveMessage("Sending invoice email...");
-      const res = await fetch("/api/sendEmails", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          email,
-          items,
-          orderId,
-          discount: discount[orderId] || 0,
-        }),
-      });
-      if (res.ok) {
-        toast.success("Invoice email sent successfully");
-      }
-    } catch (error) {
-      toast.error("Error sending invoice email");
-    } finally {
-      setVerifying(false);
-      setLiveMessage("");
-    }
-  };
-  const handleApproveOrder = async (
-    orderId: string,
-    email: string,
-    items: IItems[],
-  ) => {
-    try {
-      setVerifying(true);
-      setLiveMessage("Approving order...");
-      const res = await fetch("/api/orders/placeOrderforOEMandReseller", {
-        method: "PUT",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          orderId,
-          discount: discount[orderId] || 0,
-          updatedItems: items,
-          email,
-        }),
-      });
-
-      if (res.ok) {
-        toast.success("Order approved successfully");
-        setOrders((prevOrders) =>
-          prevOrders.filter((order) => order._id !== orderId),
-        );
-        const itemsForEmails: IItemsforEmail[] = items.map((item) => ({
-          productName: item.product_id.productName,
-          quantity: item.quantity,
-          price: item.Price,
-          category: item.product_id.productCategory,
-        }));
-        await handleEmailInvoice(email, itemsForEmails, orderId);
-        return;
-      }
-      toast.error("Error approving order");
-    } catch (error) {
-      toast.error("Error approving order");
-    } finally {
-      setVerifying(false);
-      setLiveMessage("");
-    }
+  const generateInvoice = (orderId: string) => {
+    router.push(`unVerifiedOrders/${orderId}`);
   };
 
   return (
     <div className="p-6 bg-slate-50 min-h-screen">
       <div className="max-w-7xl mx-auto">
         <header className="mb-8">
-          {liveMessage && (
-            <div className="flex mx-80 align-center items-center justify-center bg-emerald-50 border border-emerald-200 w-fit px-4 h-10 rounded-full mt-6 shadow-sm backdrop-blur-sm">
-              <div className="flex items-center gap-3">
-                <div className="relative flex items-center justify-center">
-                  <div className="w-4 h-4 border-2 border-emerald-200 rounded-full"></div>
-                  <div className="absolute w-4 h-4 border-2 border-emerald-600 border-t-transparent rounded-full animate-spin"></div>
-                </div>
-                <span className="text-sm font-semibold text-emerald-800 tracking-wide">
-                  {liveMessage}
-                </span>
-              </div>
-            </div>
-          )}
           <h1 className="text-3xl font-bold text-slate-900 tracking-tight">
             Order Verification
           </h1>
@@ -224,7 +110,7 @@ export default function OrderVerificationPage() {
             <button
               className=" bg-green-600 hover:bg-green-700 text-white p-2.5 rounded-xl 
             cursor-pointer font-bold text-sm flex items-center justify-center mt-6 sm:mt-0"
-              //   onClick={handleFindUserByEmail}
+                onClick={handleFindUserByEmail}
             >
               Search User
             </button>
@@ -263,6 +149,28 @@ export default function OrderVerificationPage() {
                         <p className="text-xs text-gray-600">
                           {order.user.email}
                         </p>
+
+                        <div className="w-[85%] md:w-[250px] flex-shrink-0 p-4 border rounded-lg bg-white mt-2 ">
+                          <div className="flex justify-between items-start mb-2">
+                            <span className="px-2 py-1 text-xs font-semibold uppercase rounded bg-gray-100 text-gray-600">
+                              {order.shippingAddress.type}
+                            </span>
+                          </div>
+                          <p className="text-sm text-green-600/70 font-medium">
+                            {order.shippingAddress.street}
+                          </p>
+                          <p className="text-sm text-gray-600">
+                            {order.shippingAddress.city},{" "}
+                            {order.shippingAddress.state} -{" "}
+                            {order.shippingAddress.zipCode}
+                          </p>
+                          <p className="text-sm text-gray-600">
+                            {order.shippingAddress.country}
+                          </p>
+                          <p className="text-sm text-black mt-2 font-mono">
+                            {order.shippingAddress.phone}
+                          </p>
+                        </div>
                       </div>
                     </div>
                     <div className="text-right">
@@ -299,18 +207,9 @@ export default function OrderVerificationPage() {
                             </span>
                             <div className="flex items-center gap-1">
                               <span className="text-gray-600">₹</span>
-                              <input
-                                type="number"
-                                value={item.Price}
-                                onChange={(e) =>
-                                  handlePriceChange(
-                                    order._id,
-                                    item.product_id._id,
-                                    e.target.valueAsNumber,
-                                  )
-                                }
-                                className="w-24 px-2 py-1 border rounded text-right text-black font-medium focus:ring-1 focus:ring-green-500 outline-none"
-                              />
+                              <p className=" py-1 rounded text-right text-black font-medium ">
+                                {item.Price}
+                              </p>
                             </div>
                           </div>
                         ))}
@@ -342,41 +241,19 @@ export default function OrderVerificationPage() {
                           </p>
                         </div>
                       </div>
-                      <div className="mt-4">
-                        <input
-                          type="number"
-                          placeholder="Apply Discount"
-                          value={discount[order._id] || ""}
-                          onChange={(e) =>
-                            handleDiscountChange(
-                              order._id,
-                              e.target.valueAsNumber,
-                            )
-                          }
-                          className="px-4 py-2 placeholder-slate-500
-                             text-slate-700
-                             border border-slate-300 rounded-lg w-full max-w-sm focus:outline-none focus:ring-2 focus:ring-green-500"
-                        />
-                      </div>
+                      
                     </div>
                   </div>
 
                   <div className="px-6 py-4 bg-gray-50/50 border-t border-gray-100 flex justify-end gap-3">
                     <button
-                      onClick={() =>
-                        handleApproveOrder(
-                          order._id,
-                          order.user.email,
-                          order.items,
-                        )
-                      }
-                      disabled={verifying}
+                      onClick={() => generateInvoice(order._id)}
                       className="text-xs
                        font-bold cursor-pointer bg-green-600 hover:bg-green-700 text-white px-6 py-2
                         rounded-md shadow-sm transition-colors
                         disabled:opacity-50 disabled:cursor-not-allowed"
                     >
-                      Approve Order
+                      Generate PI
                     </button>
                   </div>
                 </div>

@@ -23,8 +23,10 @@ interface Address {
 }
 
 interface RegistrationData {
+  userType: "individual" | "reseller" | "oem"
   name: string
   email: string
+  companyName: string
   password: string
   confirmPassword: string
   addresses: Address[]
@@ -56,6 +58,7 @@ export default function SignupPage() {
   
   const [errorFeilds,seterrorFeilds]=useState({
     name:false,
+    companyName:false,
     email:false,
     password:false,
     confirmPassword:false,
@@ -73,7 +76,9 @@ export default function SignupPage() {
   })
 
   const [formData, setFormData] = useState<RegistrationData>({
+    userType: "individual",
     name: "",
+    companyName: "",
     email: "",
     password: "",
     confirmPassword: "",
@@ -347,7 +352,9 @@ export default function SignupPage() {
 
     // Prepare data for your schema
     const userData = {
+      userType: formData.userType,
       name: formData.name,
+      companyName: (formData.userType === "reseller" || formData.userType === "oem") ? formData.companyName : undefined,
       email: formData.email,
       password: formData.password,
       confirmPassword: formData.confirmPassword,
@@ -394,7 +401,7 @@ export default function SignupPage() {
 
             <div className="space-y-2">
               <Label htmlFor="name" className="text-gray-700 font-medium">
-                Full Name 
+                Contact Name
               </Label>
               <span className="text-red-500">*</span>
               <div className="relative">
@@ -402,11 +409,28 @@ export default function SignupPage() {
                 <Input
                   id="name"
                   name="name"
-                  placeholder="Enter your full name"
+                  placeholder="Enter contact name"
                   value={formData.name}
                   onChange={handleInputChange}
                   className={`pl-10 h-12 bg-gray-50 ${errorFeilds.name===false ?`border-gray-300` : `border-red-300`} text-gray-900 placeholder-gray-500 focus:border-green-500 focus:ring-green-500`}
                   required
+                />
+              </div>
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="companyName" className="text-gray-700 font-medium">
+                Company Name
+              </Label>
+              <div className="relative">
+                <User className="absolute left-3 top-3 h-5 w-5 text-gray-400" />
+                <Input
+                  id="companyName"
+                  name="companyName"
+                  placeholder="Enter company name (reseller/OEM)"
+                  value={formData.companyName}
+                  onChange={handleInputChange}
+                  className="pl-10 h-12 bg-gray-50 border-gray-300 text-gray-900 placeholder-gray-500 focus:border-green-500 focus:ring-green-500"
                 />
               </div>
             </div>

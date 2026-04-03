@@ -7,6 +7,7 @@ interface Iuser {
   email: string;
   password: string;
   userType: "individual" | "reseller" | "oem";
+  companyName?: string;
   isVerified?: boolean;
   addresses: Address[];
   order: mongoose.Types.ObjectId[] | string[];

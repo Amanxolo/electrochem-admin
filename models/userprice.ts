@@ -5,7 +5,7 @@ export interface ICustomprice {
   product_id: Types.ObjectId;
   price: number;
 }
-interface IUserPrice {
+export interface IUserPrice {
   user: Types.ObjectId;
   customPrices: ICustomprice[];
 }

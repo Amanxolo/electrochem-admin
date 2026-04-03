@@ -2,41 +2,37 @@ import { NextRequest, NextResponse } from "next/server";
 import { dbConnect } from "../../../../../models/dbconnect";
 import { Order } from "../../../../../models/order";
 import mongoose from "mongoose";
-import { OrderItem ,User} from "../../../../../models/user";
+import { OrderItem, User } from "../../../../../models/user";
 import { Product } from "../../../../../models/product";
 import { UserPrice } from "../../../../../models/userprice";
 import { ICustomprice } from "../../../../../models/userprice";
-import { IPayment,Payment } from "../../../../../models/payment";
-interface IItems {
-  product_id: {
-    _id: string;
-    productName: string;
-    productCategory: string;
-  };
-  quantity: number;
-  Price: number;
-}
-interface IUser{
-    email:string,
-    order: mongoose.Types.ObjectId[]
-}
+import { IPayment, Payment } from "../../../../../models/payment";
+import { IItemsWithOtherDetails } from "@/app/unVerifiedOrders/[id]/page";
+
 export async function PUT(req: NextRequest) {
   try {
     await dbConnect();
     const body = await req.json();
-    const { orderId, discount, updatedItems ,email} = body as {
+    const { orderId, discount, shipping, updatedItems, email } = body as {
       orderId: string;
       discount: number;
-      updatedItems: IItems[];
-      email:string
+      shipping: number;
+      updatedItems: IItemsWithOtherDetails[];
+      email: string;
     };
-    const order = await Order.findById(orderId);
+    const [order, user] = await Promise.all([
+      Order.findById(orderId),
+      User.findOne({ email }),
+    ]);
+
     if (!order) {
       return NextResponse.json({ message: "Order Not Found" }, { status: 404 });
     }
-    const user=await User.findOne({email})
-    if(!user){
-        return NextResponse.json({ message: "User Not Found" }, { status: 404 });
+    if(order.status!=="not-verified"){
+      return NextResponse.json({message:"Order already Verified."},{status:401})
+    }
+    if (!user) {
+      return NextResponse.json({ message: "User Not Found" }, { status: 404 });
     }
     // console.log(updatedItems);
 
@@ -52,8 +48,10 @@ export async function PUT(req: NextRequest) {
       );
 
       const stockUpdates = [];
-      for (const item of order.items) {
-        const product = productMap.get(item.product_id.toString());
+      for (const item of updatedItems) {
+        const productId = item.productId.toString();
+        if (!productId) throw new Error("Product ID not found.");
+        const product = productMap.get(productId);
         if (!product) throw new Error("Product no longer exists");
 
         if (product.quantity < item.quantity) {
@@ -72,29 +70,30 @@ export async function PUT(req: NextRequest) {
 
       order.items = order.items.map((item: OrderItem) => {
         const updatedItem = updatedItems.find(
-          (ui: IItems) =>
-            ui.product_id._id.toString() === item.product_id.toString(),
+          (ui: IItemsWithOtherDetails) =>
+            ui.productId.toString() === item.product_id.toString(),
         );
         if (updatedItem) {
-          item.Price = updatedItem.Price;
+          item.quantity = updatedItem.quantity;
+          item.Price = updatedItem.price;
         }
         return item;
       });
       let subTotalAmount: number = 0;
       let taxAmount: number = 0;
       updatedItems.forEach((item) => {
-        subTotalAmount += item.Price * item.quantity;
+        subTotalAmount += item.price * item.quantity;
         if (
-          item.product_id.productCategory.toLowerCase().trim() === "charger" ||
-          item.product_id.productCategory.toLowerCase().trim() === "chargers"
+          item.productCategory.toLowerCase().trim() === "charger" ||
+          item.productCategory.toLowerCase().trim() === "chargers"
         ) {
-          taxAmount += 0.05 * item.Price * item.quantity;
-        } else taxAmount += 0.18 * item.Price * item.quantity;
+          taxAmount += 0.05 * item.price * item.quantity;
+        } else taxAmount += 0.18 * item.price * item.quantity;
       });
 
       let newTotalAmount: number = subTotalAmount + taxAmount;
 
-      newTotalAmount = Math.max(0, newTotalAmount - discount);
+      newTotalAmount = Math.max(0, newTotalAmount - discount + shipping);
       order.totalAmount = newTotalAmount;
       order.status = "pending";
       const paymentPayload: IPayment = {
@@ -103,10 +102,10 @@ export async function PUT(req: NextRequest) {
         payment_mode: "online",
         payment_status: "pending",
       };
-      const payment=new Payment(paymentPayload)
-      await payment.save({session})
+      const payment = new Payment(paymentPayload);
+      await payment.save({ session });
 
-      order.payment=payment._id
+      order.payment = payment._id;
       await order.save({ session });
       // user.order.push(order._id)
       // await user.save({session})
@@ -114,11 +113,8 @@ export async function PUT(req: NextRequest) {
       await User.updateOne(
         { _id: user._id },
         { $push: { order: order._id } },
-        { session, 
-          runValidators:false
-        },
+        { session, runValidators: false },
       );
-
 
       for (const item of order.items) {
         const userPriceDoc = await UserPrice.findOneAndUpdate(

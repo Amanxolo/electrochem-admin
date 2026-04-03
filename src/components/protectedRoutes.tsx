@@ -1,11 +1,11 @@
 "use client";
-import React, { useEffect } from "react";
+import React, { useEffect, useMemo } from "react";
 import { useUserhook } from "@/contexts/userContext";
 import { useRouter, usePathname } from "next/navigation";
 import { toast } from "sonner";
 
 export function ProtectedRoutes({ children }: { children: React.ReactNode }) {
-  const publicpaths = ["/login"];
+  const publicpaths = useMemo(() => ["/login"], []);
   const pathname = usePathname();
   const { token, isloading } = useUserhook();
   const router = useRouter();
@@ -16,6 +16,6 @@ export function ProtectedRoutes({ children }: { children: React.ReactNode }) {
       toast.error("Please Login to access this page");
       router.push("/login");
     }
-  }, [token, isloading, pathname, router,publicpaths]);
+  }, [token, isloading, pathname, router, publicpaths]);
   return <>{children}</>;
 }
