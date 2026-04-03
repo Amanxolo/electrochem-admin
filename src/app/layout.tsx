@@ -5,6 +5,7 @@ import { Toaster } from 'sonner'
 import { Providers } from "@/components/provider";
 import { UserProvider } from "@/contexts/userContext";
 import { ProtectedRoutes } from "@/components/protectedRoutes";
+import Navbar from "@/components/ui/Navbar";
 const geistSans = Geist({
   variable: "--font-geist-sans",
   subsets: ["latin"],
@@ -33,6 +34,7 @@ export default function RootLayout({
         <Providers>
           <UserProvider>
             <ProtectedRoutes>
+              <Navbar />
         {children}
             </ProtectedRoutes>
         </UserProvider>

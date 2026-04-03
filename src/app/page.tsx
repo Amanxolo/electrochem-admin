@@ -80,7 +80,7 @@ export default function Home() {
 
   return (
     <>
-      <header className="py-4 sticky top-0 z-10 px-4 bg-white/20 backdrop-blur-md flex items-center justify-between text-xl">
+      {/* <header className="py-4 sticky top-0 z-10 px-4 bg-white/20 backdrop-blur-md flex items-center justify-between text-xl">
         <div>
           <Link href="/" className="flex items-center gap-2 text-green-700">
             <Layers3 className="h-6 w-6" />
@@ -138,8 +138,8 @@ export default function Home() {
               <option value="Orders">Orders</option>
               <option value="/allorders">All Orders</option>
               {/* <option value="/orderverification">Bulk Orders</option> */}
-              <option value="/unVerifiedOrders">Un-Verified Orders</option>
-            </select>
+              {/* <option value="/unVerifiedOrders">Un-Verified Orders</option> */}
+            {/* </select>
           </div>
           <Link
             href="signup"
@@ -163,7 +163,7 @@ export default function Home() {
             </Link>
           )}
         </nav>
-      </header>
+      </header> */} 
 
       <section className="bg-slate-50 px-4 py-12 min-h-[100vh]">
         <div className="text-center">
