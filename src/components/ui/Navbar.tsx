@@ -1,7 +1,7 @@
 "use client";
 import Link from "next/link";
 import { useUserhook } from "@/contexts/userContext";
-import { Layers3, BellDotIcon, ChevronDown, LogOut, User } from "lucide-react";
+import { Layers3, BellDotIcon, LogOut, User } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useEffect, useState, useCallback } from "react";
 import { useRouter } from "next/navigation";
@@ -76,8 +76,8 @@ export default function Navbar() {
             <select
               name="orders"
               id="orders"
-              defaultValue={""}
-              // value={pathname}
+              
+              value=""
               onChange={(event) => {
                 router.push(event.target.value);
               }}
@@ -87,6 +87,7 @@ export default function Navbar() {
               <option value="/allorders">All Orders</option>
 
               <option value="/unVerifiedOrders">Un-Verified Orders</option>
+              <option value="/manual-pi">PI for Manual Orders</option>
             </select>
           </div>
 
@@ -101,8 +102,8 @@ export default function Navbar() {
             <select
               name="users"
               id="users"
-              defaultValue={""}
-              // value={pathname}
+              
+              value=""
               onChange={(event) => {
                 router.push(event.target.value);
               }}

@@ -41,11 +41,9 @@
       display: flex;
       justify-content: center;
       align-items: center;
-     
+
       margin-bottom: 5px;
     }
-
-    
 
     .left {
       width: 50%;
@@ -132,7 +130,10 @@
       background-color: #f2f2f2;
       font-weight: bold;
     }
-
+    .invoice-table tr {
+      page-break-inside: avoid;
+      page-break-after: auto;
+    }
     .text-right {
       text-align: right;
     }
@@ -140,14 +141,16 @@
     .font-bold {
       font-weight: bold;
     }
-
-    .invoice-table tfoot td {
+    .summary-footer {
+      page-break-inside: avoid;
+    }
+    .summary-footer td {
       border: none;
       text-align: right;
       padding: 6px 10px;
     }
 
-    .invoice-table tfoot tr.total-row td {
+    .summary-footer tr.total-row td {
       border-top: 1px solid black;
       font-weight: bold;
       padding-top: 10px;
@@ -155,10 +158,13 @@
   </style>
   <body>
     <div class="invoice-container">
-      
       <div class="logo-header">
         <!-- <img src="../public/images/ElectrochemLogo.svg" alt="Logo-not-found" style="width: 50%; height: 100px; object-fit: fill;"  /> -->
-        <img src={{logoUrl}} alt="Logo-not-found" style="width: 50%; height: 100px; object-fit: fill;"  />
+        <img
+          src="{{logoUrl}}"
+          alt="Logo-not-found"
+          style="width: 50%; height: 100px; object-fit: fill"
+        />
       </div>
       <p id="header">Proforma Invoice</p>
       <div id="details">
@@ -169,8 +175,8 @@
                 Electrochem Power Systems Private Limited
               </p>
               <p>
-                Building No. 49, First Floor, Block-A, Sector 57. Gautam
-                Buddha Nagar,NOIDA<br/>
+                Building No. 49, First Floor, Block-A, Sector 57. Gautam Buddha
+                Nagar,NOIDA<br />
                 Pin Code-201301<br />
                 GSTIN/UIN: 09AAECE2577M1Z5<br />
                 State Name : Uttar Pradesh, Code : 09<br />
@@ -240,13 +246,13 @@
           </div>
           <div class="right-bottom">
             <p>Terms of Delivery</p>
-            <p style="font-weight:normal;">{{termsOfDelivery}}</p>
+            <p style="font-weight: normal">{{termsOfDelivery}}</p>
           </div>
         </div>
       </div>
 
       <table class="invoice-table">
-        <thead>
+        <tbody>
           <tr>
             <th>Sl No.</th>
             <th>Description of Goods</th>
@@ -257,40 +263,79 @@
             <th>per</th>
             <th>Amount</th>
           </tr>
-        </thead>
+        </tbody>
         <tbody>
           {{items}}
         </tbody>
-        <tfoot>
+        <tbody class="summary-footer">
           <tr>
-            <td colspan="7" class="text-right">Subtotal</td>
-            <td class="text-right">{{subtotal}}</td>
+            <td
+              colspan="4"
+              rowspan="7"
+              style="border-top: 1px solid black"
+            ></td>
+            <td
+              colspan="3"
+              class="text-right"
+              style="border: none; border-top: 1px solid black ;border-left: 1px solid black;"
+            >
+              Subtotal
+            </td>
+            <td
+              class="text-right"
+              style="border: none; border-top: 1px solid black"
+            >
+              {{subtotal}}
+            </td>
           </tr>
           <tr>
-            <td colspan="7" class="text-right">Discount</td>
-            <td class="text-right">{{discount}}</td>
+            <td colspan="3" class="text-right" style="border: none;border-left: 1px solid black;">
+              Discount
+            </td>
+            <td class="text-right" style="border: none">{{discount}}</td>
           </tr>
           <tr>
-            <td colspan="7" class="text-right">Shipping Charge</td>
-            <td class="text-right">{{shipping}}</td>
+            <td colspan="3" class="text-right" style="border: none;border-left: 1px solid black;">
+              Shipping Charge
+            </td>
+            <td class="text-right" style="border: none">{{shipping}}</td>
           </tr>
           <tr>
-            <td colspan="7" class="text-right">CGST</td>
-            <td class="text-right">{{cgstAmount}}</td>
+            <td colspan="3" class="text-right" style="border: none; border-left: 1px solid black;">CGST</td>
+            <td class="text-right" style="border: none">{{cgstAmount}}</td>
           </tr>
           <tr>
-            <td colspan="7" class="text-right">SGST</td>
-            <td class="text-right">{{sgstAmount}}</td>
+            <td colspan="3" class="text-right" style="border: none; border-left: 1px solid black;">SGST</td>
+            <td class="text-right" style="border: none">{{sgstAmount}}</td>
           </tr>
           <tr>
-            <td colspan="7" class="text-right">IGST</td>
-            <td class="text-right">{{igstAmount}}</td>
+            <td colspan="3" class="text-right" style="border: none; border-left: 1px solid black;">IGST</td>
+            <td class="text-right" style="border: none">{{igstAmount}}</td>
           </tr>
           <tr class="total-row">
-            <td colspan="7" class="text-right">Total (in Rs)</td>
-            <td class="text-right">{{totalAmount}}</td>
+            <td
+              colspan="3"
+              class="text-right font-bold"
+              style="
+                border-top: 1px solid black;
+                border-bottom: 1px solid black;
+                border-left: 1px solid black;
+              "
+            >
+              Total (in Rs)
+            </td>
+            <td
+              class="text-right font-bold"
+              style="
+                border: none;
+                border-top: 1px solid black;
+                border-bottom: 1px solid black;
+              "
+            >
+              {{totalAmount}}
+            </td>
           </tr>
-        </tfoot>
+        </tbody>
       </table>
     </div>
   </body>
