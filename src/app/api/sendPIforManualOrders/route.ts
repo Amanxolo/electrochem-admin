@@ -6,9 +6,11 @@ import fs from "fs";
 import path from "path";
 import { dbConnect } from "../../../../models/dbconnect";
 
-
-
-import {Address,IOtherData,IItemsWithOtherDetails} from "@/app/manual-pi/page"
+import {
+  Address,
+  IOtherData,
+  IItemsWithOtherDetails,
+} from "@/app/manual-pi/page";
 let puppeteer: PuppeteerNode;
 const isProduction = process.env.NODE_ENV === "production";
 
@@ -55,16 +57,26 @@ export async function POST(req: Request) {
     const body = (await req.json()) as {
       items: IItemsWithOtherDetails[];
       email: string;
-      customerName:string,
-      shippingAddress:Address,
-      billingAddress:Address,
-      gstIn:string
+      customerName: string;
+      shippingAddress: Address;
+      billingAddress: Address;
+      gstIn: string;
       discount: number;
       shipping: number;
       otherData: IOtherData;
     };
 
-    const { items,gstIn, email,customerName, discount, shipping, otherData,shippingAddress,billingAddress } = body;
+    const {
+      items,
+      gstIn,
+      email,
+      customerName,
+      discount,
+      shipping,
+      otherData,
+      shippingAddress,
+      billingAddress,
+    } = body;
 
     if (!items || items.length === 0) {
       return NextResponse.json(
@@ -72,9 +84,6 @@ export async function POST(req: Request) {
         { status: 400 },
       );
     }
-
-    
-    
 
     if (!fs.existsSync(templatePath) || !fs.existsSync(logoPath)) {
       throw new Error("Required template or logo files are missing.");
@@ -155,7 +164,7 @@ export async function POST(req: Request) {
       .replace(/{{paymentMode}}/g, otherData.paymentMode)
       .replace(/{{dispatch}}/g, otherData.dispatchThru)
       .replace(/{{termsOfDelivery}}/g, otherData.termOfDelivery)
-      .replace(/{{customerName}}/g, (customerName || "Valued Customer"))
+      .replace(/{{customerName}}/g, customerName || "Valued Customer")
       .replace(
         /{{customerAddress}}/g,
         `${primaryAddress?.street}, ${primaryAddress?.city}, ${primaryAddress?.state}`,
@@ -206,8 +215,25 @@ export async function POST(req: Request) {
     const { data: emailResult, error: emailError } = await resend.emails.send({
       from: "sales@electrochembattery.com",
       to: email,
-      subject: `Proforma Invoice ${piNumber} - ElectroChem`,
-      html: `<p>Dear ${customerName},</p><p>Please find attached your Proforma Invoice <strong>${piNumber}</strong>.</p>`,
+      subject: `Proforma Invoice ${piNumber} - ElectroChem Power Systems`,
+      html: `
+          <div style="font-family: Arial, sans-serif; color: #333; line-height: 1.6;">
+            <p>Dear <strong>${customerName}</strong>,</p>
+            
+            <p>Please find attached Proforma Invoice <strong>${piNumber}</strong> regarding your recent order.</p>
+            
+          
+            <div style="margin-top: 30px; border-top: 1px solid #eee; padding-top: 20px;">
+              <p style="margin: 0;">Best Regards,</p>
+              
+              <p style="margin: 0; font-weight: bold;">Electrochem Power Systems Private Limited</p>
+              <p style="margin: 0; font-size: 12px; color: #666;">
+                Building No. 49, First Floor, Block-A, Sector 57, Gautam Buddha Nagar<br />
+                Noida, Uttar Pradesh - 201301
+              </p>
+            </div>
+          </div>
+  `,
       attachments: [
         { content: Buffer.from(pdfBuffer), filename: `${piNumber}.pdf` },
       ],
@@ -221,13 +247,13 @@ export async function POST(req: Request) {
       );
     }
 
-    // 7. Finalize Order Status
-    
-
-    return NextResponse.json(
-      { message: "Invoice sent successfully." },
-      { status: 201 },
-    );
+    return new NextResponse(pdfBuffer as unknown as BodyInit, {
+      status: 200,
+      headers: {
+        "Content-Type": "application/pdf",
+        "Content-Disposition": `attachment; filename="${piNumber}.pdf"`,
+      },
+    });
   } catch (err) {
     console.error("Invoice Error:", err);
     let errorMessage: string = "Internal Server Error";

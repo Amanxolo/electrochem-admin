@@ -173,11 +173,40 @@ const ProformaInvoice = ({ params }: { params: Promise<{ id: string }> }) => {
         }),
       });
       if (res.ok) {
-        toast.success("Invoice email sent successfully");
-        router.push("/unVerifiedOrders");
-      }
+             const blob = await res.blob();
+             const url = window.URL.createObjectURL(blob);
+             const a = document.createElement("a");
+             a.href = url;
+             const contentDisposition = res.headers.get("Content-Disposition") ??
+                res.headers.get("content-disposition") ??
+              "";
+              
+             let filename = `PI`;
+             if (contentDisposition) {
+               const match = contentDisposition.match(
+                 /filename\*=UTF-8''([^;]+)|filename="?([^";]+)"?/i,
+               );
+               if (match) {
+                 filename = decodeURIComponent(match[1] || match[2]).replace(
+                   /\.pdf$/i,
+                   "",
+                 );
+               }
+             }
+             filename += `-${order?.user.name}.pdf`;
+             a.download = filename;
+             document.body.appendChild(a);
+             a.click();
+             setTimeout(() => {
+               window.URL.revokeObjectURL(url);
+               document.body.removeChild(a);
+             }, 100);
+     
+             toast.success("Invoice sent and downloaded successfully");
+             router.push('/unVerifiedOrders');
+           }
     } catch (error) {
-      toast.error("Error sending invoice email");
+      toast.error("Error sending or downloading invoice email");
     } finally {
       setVerifying(false);
       setLiveMessage("");
@@ -223,7 +252,7 @@ const ProformaInvoice = ({ params }: { params: Promise<{ id: string }> }) => {
         await handleEmailInvoice(email, itemsForEmails, id);
         return;
       }
-      const data=await res.json();
+      const data = await res.json();
       toast.error(data.message || "Error approving order");
     } catch (error) {
       toast.error("Error approving order");
@@ -249,7 +278,6 @@ const ProformaInvoice = ({ params }: { params: Promise<{ id: string }> }) => {
       {liveMessage && (
         <div className="fixed top-10 left-1/2 -translate-x-1/2 z-50 animate-in fade-in slide-in-from-top-4 duration-300">
           <div className="flex items-center gap-3 bg-emerald-100 backdrop-blur-md border border-emerald-400 px-4 py-2 rounded-full shadow-lg shadow-emerald-100/50">
-            
             <div className="relative flex items-center justify-center">
               <div className="w-4 h-4 border-2 border-emerald-100 rounded-full"></div>
               <div className="absolute w-4 h-4 border-2 border-emerald-500 border-t-transparent rounded-full animate-spin"></div>
