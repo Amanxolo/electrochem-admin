@@ -212,7 +212,24 @@ export async function POST(req: Request) {
       from: "sales@electrochembattery.com",
       to: email,
       subject: `Proforma Invoice ${piNumber} - ElectroChem`,
-      html: `<p>Dear ${user.name},</p><p>Please find attached your Proforma Invoice <strong>${piNumber}</strong>.</p>`,
+       html: `
+          <div style="font-family: Arial, sans-serif; color: #333; line-height: 1.6;">
+            <p>Dear <strong>${user.name}</strong>,</p>
+            
+            <p>Please find attached Proforma Invoice <strong>${piNumber}</strong> regarding your recent order.</p>
+            
+          
+            <div style="margin-top: 30px; border-top: 1px solid #eee; padding-top: 20px;">
+              <p style="margin: 0;">Best Regards,</p>
+              
+              <p style="margin: 0; font-weight: bold;">Electrochem Power Systems Private Limited</p>
+              <p style="margin: 0; font-size: 12px; color: #666;">
+                Building No. 49, First Floor, Block-A, Sector 57, Gautam Buddha Nagar<br />
+                Noida, Uttar Pradesh - 201301
+              </p>
+            </div>
+          </div>
+  `,
       attachments: [
         { content: Buffer.from(pdfBuffer), filename: `${piNumber}.pdf` },
       ],
@@ -229,10 +246,13 @@ export async function POST(req: Request) {
     // 7. Finalize Order Status
     await Order.findByIdAndUpdate(orderId, { isEmailSent: true });
 
-    return NextResponse.json(
-      { message: "Invoice sent successfully." },
-      { status: 201 },
-    );
+    return new NextResponse(pdfBuffer as unknown as BodyInit,{
+      status: 200,
+      headers: {
+        "Content-Type": "application/pdf",
+        "Content-Disposition": `attachment; filename="${piNumber}.pdf"`,
+      },
+    });
   } catch (err) {
     console.error("Invoice Error:", err);
     let errorMessage: string = "Internal Server Error";

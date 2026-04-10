@@ -1,9 +1,8 @@
 "use client";
-import React, { useState, useMemo ,useEffect} from "react";
+import React, { useState, useMemo, useEffect } from "react";
 import Image from "next/image";
 import { toast } from "sonner";
 import { useRouter } from "next/navigation";
-
 
 export interface Address {
   type: "billing" | "shipping";
@@ -39,7 +38,7 @@ const ProformaInvoice = () => {
   const router = useRouter();
   const [customerEmail, setCustomerEmail] = useState<string>("");
   const [customerName, setCustomerName] = useState<string>("");
-  const [gstIn,setgstIn]=useState<string>("")
+  const [gstIn, setgstIn] = useState<string>("");
   const [shippingAddress, setShippingAddress] = useState<Address>({
     type: "shipping",
     street: "",
@@ -61,7 +60,6 @@ const ProformaInvoice = () => {
 
   const [items, setItems] = useState<IItemsWithOtherDetails[]>([
     {
-      
       productName: "",
       productCategory: "batteries",
       quantity: 1,
@@ -115,38 +113,47 @@ const ProformaInvoice = () => {
       subtotal + cgst + sgst + igst - (discount || 0) + (shipping || 0);
     return { subtotal, sgst, cgst, igst, finalTotal };
   }, [items, discount, shipping, shippingAddress.state]);
-  const handleVerifyFeilds = ():boolean => {
+  const handleVerifyFeilds = (): boolean => {
     if (!customerEmail || !customerName || !gstIn) {
       toast.error("Please provide Customer Email and Name and GSTIN");
       return false;
     }
-    if(shippingAddress.street.trim()==="" || shippingAddress.city.trim()==="" || shippingAddress.zipCode.trim()===""
-    || shippingAddress.state.trim()==="" || shippingAddress.phone.trim()===""){
-        toast.error("Please provide proper shipping Address");
-        return false;
+    if (
+      shippingAddress.street.trim() === "" ||
+      shippingAddress.city.trim() === "" ||
+      shippingAddress.zipCode.trim() === "" ||
+      shippingAddress.state.trim() === "" ||
+      shippingAddress.phone.trim() === ""
+    ) {
+      toast.error("Please provide proper shipping Address");
+      return false;
     }
-    if(billingAddress.street.trim()==="" || billingAddress.city.trim()==="" || billingAddress.zipCode.trim()===""
-    || billingAddress.state.trim()==="" || billingAddress.phone.trim()===""){
-        toast.error("Please provide proper billing Address");
-        return false;
+    if (
+      billingAddress.street.trim() === "" ||
+      billingAddress.city.trim() === "" ||
+      billingAddress.zipCode.trim() === "" ||
+      billingAddress.state.trim() === "" ||
+      billingAddress.phone.trim() === ""
+    ) {
+      toast.error("Please provide proper billing Address");
+      return false;
     }
-    if(items.length===0){
+    if (items.length === 0) {
       toast.error("Please provide Items");
       return false;
     }
 
     return true;
-  }
+  };
   const handleSendManualPI = async () => {
-    
-    const isOkay:boolean=handleVerifyFeilds();
-    if(!isOkay)return;
-    const filteredItems=items.filter((item)=>Number(item.price)!==0)
-    if(filteredItems.length===0){
+    const isOkay: boolean = handleVerifyFeilds();
+    if (!isOkay) return;
+    const filteredItems = items.filter((item) => Number(item.price) !== 0);
+    if (filteredItems.length === 0) {
       toast.error("Please provide proper Items");
       return;
     }
-    setItems(filteredItems)
+    setItems(filteredItems);
     try {
       setVerifying(true);
       const res = await fetch("/api/sendPIforManualOrders", {
@@ -158,19 +165,45 @@ const ProformaInvoice = () => {
           gstIn,
           shippingAddress,
           billingAddress,
-          items:filteredItems,
+          items: filteredItems,
           discount,
           shipping,
           otherData,
-          
         }),
       });
       if (res.ok) {
-        toast.success("Invoice email sent successfully");
+        const blob = await res.blob();
+        const url = window.URL.createObjectURL(blob);
+        const a = document.createElement("a");
+        a.href = url;
+        const contentDisposition = res.headers.get("Content-Disposition") ?? res.headers.get("content-disposition") ?? "";
+          
+        let filename = `PI`;
+        if (contentDisposition) {
+          const match = contentDisposition.match(
+            /filename\*=UTF-8''([^;]+)|filename="?([^";]+)"?/i,
+          );
+          if (match) {
+            filename = decodeURIComponent(match[1] || match[2]).replace(
+              /\.pdf$/i,
+              "",
+            );
+          }
+        }
+        filename += `-${customerName}.pdf`;
+        a.download = filename;
+        document.body.appendChild(a);
+        a.click();
+        setTimeout(() => {
+          window.URL.revokeObjectURL(url);
+          document.body.removeChild(a);
+        }, 100);
+
+        toast.success("Invoice sent and downloaded successfully");
         router.refresh();
       }
     } catch (error) {
-      toast.error("Error sending invoice email");
+      toast.error("Error sending or downloading invoice email");
     } finally {
       setVerifying(false);
     }
@@ -178,9 +211,6 @@ const ProformaInvoice = () => {
 
   return (
     <div className="bg-white min-h-screen pt-2 pb-8 font-sans text-[13px] text-black">
-      
-     
-
       <div className="logo-header w-full flex justify-center items-center py-5">
         <div className="relative w-[30%] h-[100px]">
           <Image
@@ -233,7 +263,10 @@ const ProformaInvoice = () => {
                 className="w-full border-2 border-blue-400 p-1 text-[13px] h-12"
                 value={shippingAddress.street}
                 onChange={(e) =>
-                  setShippingAddress({ ...shippingAddress, street: e.target.value })
+                  setShippingAddress({
+                    ...shippingAddress,
+                    street: e.target.value,
+                  })
                 }
               />
               <div className="grid grid-cols-2 gap-1 mt-1">
@@ -241,7 +274,10 @@ const ProformaInvoice = () => {
                   placeholder="City"
                   value={shippingAddress.city}
                   onChange={(e) =>
-                    setShippingAddress({ ...shippingAddress, city: e.target.value })
+                    setShippingAddress({
+                      ...shippingAddress,
+                      city: e.target.value,
+                    })
                   }
                   className="border-2 border-blue-400 p-1"
                 />
@@ -249,7 +285,10 @@ const ProformaInvoice = () => {
                   placeholder="State"
                   value={shippingAddress.state}
                   onChange={(e) =>
-                    setShippingAddress({ ...shippingAddress, state: e.target.value })
+                    setShippingAddress({
+                      ...shippingAddress,
+                      state: e.target.value,
+                    })
                   }
                   className="border-2 border-blue-400 p-1"
                 />
@@ -257,7 +296,10 @@ const ProformaInvoice = () => {
                   placeholder="Zip Code"
                   value={shippingAddress.zipCode}
                   onChange={(e) =>
-                    setShippingAddress({ ...shippingAddress, zipCode: e.target.value })
+                    setShippingAddress({
+                      ...shippingAddress,
+                      zipCode: e.target.value,
+                    })
                   }
                   className="border-2 border-blue-400 p-1"
                 />
@@ -265,7 +307,10 @@ const ProformaInvoice = () => {
                   placeholder="Phone"
                   value={shippingAddress.phone}
                   onChange={(e) =>
-                    setShippingAddress({ ...shippingAddress, phone: e.target.value })
+                    setShippingAddress({
+                      ...shippingAddress,
+                      phone: e.target.value,
+                    })
                   }
                   className="border-2 border-blue-400 p-1"
                 />
@@ -285,7 +330,10 @@ const ProformaInvoice = () => {
                 className="w-full border-2 border-blue-400 p-1 text-[13px] h-12"
                 value={billingAddress.street}
                 onChange={(e) =>
-                  setBillingAddress({ ...billingAddress, street: e.target.value })
+                  setBillingAddress({
+                    ...billingAddress,
+                    street: e.target.value,
+                  })
                 }
               />
               <div className="grid grid-cols-2 gap-1 mt-1">
@@ -293,7 +341,10 @@ const ProformaInvoice = () => {
                   placeholder="City"
                   value={billingAddress.city}
                   onChange={(e) =>
-                    setBillingAddress({ ...billingAddress, city: e.target.value })
+                    setBillingAddress({
+                      ...billingAddress,
+                      city: e.target.value,
+                    })
                   }
                   className="border-2 border-blue-400 p-1"
                 />
@@ -301,7 +352,10 @@ const ProformaInvoice = () => {
                   placeholder="State"
                   value={billingAddress.state}
                   onChange={(e) =>
-                    setBillingAddress({ ...billingAddress, state: e.target.value })
+                    setBillingAddress({
+                      ...billingAddress,
+                      state: e.target.value,
+                    })
                   }
                   className="border-2 border-blue-400 p-1"
                 />
@@ -309,7 +363,10 @@ const ProformaInvoice = () => {
                   placeholder="Zip Code"
                   value={billingAddress.zipCode}
                   onChange={(e) =>
-                    setBillingAddress({ ...billingAddress, zipCode: e.target.value })
+                    setBillingAddress({
+                      ...billingAddress,
+                      zipCode: e.target.value,
+                    })
                   }
                   className="border-2 border-blue-400 p-1"
                 />
@@ -317,7 +374,10 @@ const ProformaInvoice = () => {
                   placeholder="Phone"
                   value={billingAddress.phone}
                   onChange={(e) =>
-                    setBillingAddress({ ...billingAddress, phone: e.target.value })
+                    setBillingAddress({
+                      ...billingAddress,
+                      phone: e.target.value,
+                    })
                   }
                   className="border-2 border-blue-400 p-1"
                 />
@@ -413,7 +473,9 @@ const ProformaInvoice = () => {
                 Category
               </th>
               <th className="border-r-[1.5px] border-black p-2 w-[10%]">HSN</th>
-              <th className="border-r-[1.5px] border-black p-2 w-[10%]">Due Date</th>
+              <th className="border-r-[1.5px] border-black p-2 w-[10%]">
+                Due Date
+              </th>
               <th className="border-r-[1.5px] border-black p-2 w-[10%]">Qty</th>
               <th className="border-r-[1.5px] border-black p-2 w-[10%]">
                 Rate
@@ -444,7 +506,10 @@ const ProformaInvoice = () => {
                     value={item.productCategory}
                     onChange={(e) => {
                       const n = [...items];
-                      n[idx].productCategory = e.target.value as "batteries" | "chargers" | "others";
+                      n[idx].productCategory = e.target.value as
+                        | "batteries"
+                        | "chargers"
+                        | "others";
                       setItems(n);
                     }}
                     className="w-full border-2 border-blue-400 p-1 text-[11px]"
@@ -467,7 +532,7 @@ const ProformaInvoice = () => {
                 </td>
                 <td className="border-r-[1.5px] border-black p-1">
                   <input
-                    type= "date"
+                    type="date"
                     value={item.dueDate}
                     onChange={(e) => {
                       const n = [...items];
@@ -573,7 +638,7 @@ const ProformaInvoice = () => {
               <td className="text-right p-0 border-l border-black/5">
                 <input
                   type="number"
-                    value={isNaN(shipping) ? 0 : shipping}
+                  value={isNaN(shipping) ? 0 : shipping}
                   onChange={(e) => setShipping(e.target.valueAsNumber || 0)}
                   className="w-full text-right border-2 border-blue-400 p-1 pr-4 font-bold"
                 />
@@ -583,9 +648,7 @@ const ProformaInvoice = () => {
               <td colSpan={7} className="text-right p-1 px-4">
                 CGST
               </td>
-              <td className="text-right p-1  pr-4">
-                {totals.cgst.toFixed(2)}
-              </td>
+              <td className="text-right p-1  pr-4">{totals.cgst.toFixed(2)}</td>
             </tr>
             <tr>
               <td colSpan={7} className="text-right p-1 px-4">
@@ -615,7 +678,7 @@ const ProformaInvoice = () => {
         </table>
       </div>
 
-       <div className="max-w-[950px] mx-auto p-4 border border-blue-400 bg-blue-50 print:hidden flex items-center gap-4">
+      <div className="max-w-[950px] mx-auto p-4 border border-blue-400 bg-blue-50 print:hidden flex items-center gap-4">
         <div className="flex-grow">
           <label className="font-bold block text-[11px] mb-1">
             CUSTOMER EMAIL (RECIPIENT)
@@ -641,5 +704,3 @@ const ProformaInvoice = () => {
 };
 
 export default ProformaInvoice;
-
-
