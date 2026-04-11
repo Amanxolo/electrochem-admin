@@ -487,7 +487,6 @@ function PIEditor({ pi, onBack }: { pi: PIData; onBack: () => void }) {
                 />
               </div>
             </div>
-            <BankDetailsPanel />
             <div className="p-2 flex-grow min-h-[150px]">
               <p className="font-bold text-[11px] mb-1">Terms of Delivery</p>
               <textarea
@@ -652,12 +651,19 @@ function PIEditor({ pi, onBack }: { pi: PIData; onBack: () => void }) {
           </tbody>
           <tfoot className="border-t-[1.5px] border-black font-medium text-[14px]">
             <tr>
-              <td colSpan={7} className="text-right p-1 px-4">Subtotal</td>
+              <td
+                rowSpan={7}
+                colSpan={4}
+                className="border-t-[1.5px] border-r-[1.5px] border-black p-2 align-top text-left"
+              >
+                <BankDetailsPanel variant="table" />
+              </td>
+              <td colSpan={3} className="text-right p-1 px-4">Subtotal</td>
               <td className="text-right p-1 px-4 pr-4 border-l border-black/5">{totals.subtotal.toFixed(2)}</td>
-              <td />
+              <td className="print:hidden border-t-[1.5px] border-black" />
             </tr>
             <tr>
-              <td colSpan={7} className="text-right p-1 px-4 font-bold text-gray-500">Discount</td>
+              <td colSpan={3} className="text-right p-1 px-4 font-bold text-gray-500">Discount</td>
               <td className="text-right p-0 border-l border-black/5">
                 <input
                   type="number"
@@ -666,10 +672,10 @@ function PIEditor({ pi, onBack }: { pi: PIData; onBack: () => void }) {
                   className="w-full text-right bg-gray-50 border-2 border-blue-400 p-1 pr-4 focus:ring-0 focus:outline-none font-bold"
                 />
               </td>
-              <td />
+              <td className="print:hidden" />
             </tr>
             <tr>
-              <td colSpan={7} className="text-right p-1 px-4 font-bold text-gray-500">Shipping</td>
+              <td colSpan={3} className="text-right p-1 px-4 font-bold text-gray-500">Shipping</td>
               <td className="text-right p-0 border-l border-black/5">
                 <input
                   type="number"
@@ -678,29 +684,29 @@ function PIEditor({ pi, onBack }: { pi: PIData; onBack: () => void }) {
                   className="w-full text-right bg-gray-50 border-2 border-blue-400 p-1 pr-4 focus:ring-0 focus:outline-none font-bold"
                 />
               </td>
-              <td />
+              <td className="print:hidden" />
             </tr>
             <tr>
-              <td colSpan={7} className="text-right p-1 px-4">CGST</td>
+              <td colSpan={3} className="text-right p-1 px-4">CGST</td>
               <td className="text-right p-1 px-4 pr-4 border-l border-black/5">{totals.cgst.toFixed(2)}</td>
-              <td />
+              <td className="print:hidden" />
             </tr>
             <tr>
-              <td colSpan={7} className="text-right p-1 px-4">SGST</td>
+              <td colSpan={3} className="text-right p-1 px-4">SGST</td>
               <td className="text-right p-1 px-4 pr-4 border-l border-black/5">{totals.sgst.toFixed(2)}</td>
-              <td />
+              <td className="print:hidden" />
             </tr>
             <tr className="border-b-[1.5px] border-black">
-              <td colSpan={7} className="text-right p-1 px-4 pb-2">IGST</td>
+              <td colSpan={3} className="text-right p-1 px-4 pb-2">IGST</td>
               <td className="text-right p-1 px-4 pr-4 pb-2 border-l border-black/5">{totals.igst.toFixed(2)}</td>
-              <td />
+              <td className="print:hidden" />
             </tr>
             <tr className="font-bold text-[18px]">
-              <td colSpan={7} className="text-right p-3 px-4 uppercase">Total (in Rs)</td>
+              <td colSpan={3} className="text-right p-3 px-4 uppercase">Total (in Rs)</td>
               <td className="text-right p-3 px-4 pr-4 font-black border-l border-black/5">
                 ₹{totals.finalTotal.toFixed(2)}
               </td>
-              <td />
+              <td className="print:hidden" />
             </tr>
           </tfoot>
         </table>

@@ -424,7 +424,6 @@ const ProformaInvoice = ({ params }: { params: Promise<{ id: string }> }) => {
                 </p>
               </div>
             </div>
-            <BankDetailsPanel />
             <div className="p-2 flex-grow min-h-[150px] flex flex-col">
               <p className="font-bold text-[11px] mb-1">Terms of Delivery</p>
               <textarea
@@ -543,7 +542,14 @@ const ProformaInvoice = ({ params }: { params: Promise<{ id: string }> }) => {
           </tbody>
           <tfoot className="border-t-[1.5px] border-black font-medium text-[14px]">
             <tr>
-              <td colSpan={7} className="text-right p-1 px-4">
+              <td
+                rowSpan={7}
+                colSpan={4}
+                className="border-t-[1.5px] border-r-[1.5px] border-black p-2 align-top text-left"
+              >
+                <BankDetailsPanel variant="table" />
+              </td>
+              <td colSpan={3} className="text-right p-1 px-4">
                 Subtotal
               </td>
               <td className="text-right p-1 px-4 pr-4 border-l border-black/5">
@@ -552,7 +558,7 @@ const ProformaInvoice = ({ params }: { params: Promise<{ id: string }> }) => {
             </tr>
             <tr>
               <td
-                colSpan={7}
+                colSpan={3}
                 className="text-right p-1 px-4 font-bold text-gray-500"
               >
                 Discount
@@ -568,7 +574,7 @@ const ProformaInvoice = ({ params }: { params: Promise<{ id: string }> }) => {
             </tr>
             <tr>
               <td
-                colSpan={7}
+                colSpan={3}
                 className="text-right p-1 px-4 font-bold text-gray-500"
               >
                 Shipping Charge
@@ -583,7 +589,7 @@ const ProformaInvoice = ({ params }: { params: Promise<{ id: string }> }) => {
               </td>
             </tr>
             <tr>
-              <td colSpan={7} className="text-right p-1 px-4">
+              <td colSpan={3} className="text-right p-1 px-4">
                 CGST
               </td>
               <td className="text-right p-1 px-4 pr-4 border-l border-black/5">
@@ -591,7 +597,7 @@ const ProformaInvoice = ({ params }: { params: Promise<{ id: string }> }) => {
               </td>
             </tr>
             <tr>
-              <td colSpan={7} className="text-right p-1 px-4">
+              <td colSpan={3} className="text-right p-1 px-4">
                 SGST
               </td>
               <td className="text-right p-1 px-4 pr-4 border-l border-black/5">
@@ -599,7 +605,7 @@ const ProformaInvoice = ({ params }: { params: Promise<{ id: string }> }) => {
               </td>
             </tr>
             <tr className="border-b-[1.5px] border-black">
-              <td colSpan={7} className="text-right p-1 px-4 pb-2">
+              <td colSpan={3} className="text-right p-1 px-4 pb-2">
                 IGST
               </td>
               <td className="text-right p-1 px-4 pr-4 pb-2 border-l border-black/5">
@@ -607,7 +613,7 @@ const ProformaInvoice = ({ params }: { params: Promise<{ id: string }> }) => {
               </td>
             </tr>
             <tr className="font-bold text-[18px]">
-              <td colSpan={7} className="text-right p-3 px-4 uppercase">
+              <td colSpan={3} className="text-right p-3 px-4 uppercase">
                 Total (in Rs)
               </td>
               <td className="text-right p-3 px-4 pr-4 font-black border-l border-black/5">
