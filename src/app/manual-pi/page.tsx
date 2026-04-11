@@ -3,6 +3,7 @@ import React, { useState, useMemo, useEffect } from "react";
 import Image from "next/image";
 import { toast } from "sonner";
 import { useRouter } from "next/navigation";
+import BankDetailsPanel from "@/components/proforma-invoice/BankDetailsPanel";
 
 export interface Address {
   type: "billing" | "shipping";
@@ -73,7 +74,7 @@ const ProformaInvoice = () => {
   const [shipping, setShipping] = useState<number>(0);
   const [verifying, setVerifying] = useState(false);
   const [otherData, setOtherData] = useState<IOtherData>({
-    piNumber: `PI-MAN-${Math.floor(Math.random() * 10000)}`,
+    piNumber: "",
     validUntil: "",
     paymentMode: "Bank Transfer",
     supplierReferance: "",
@@ -85,6 +86,10 @@ const ProformaInvoice = () => {
 
   useEffect(() => {
     setMounted(true);
+    setOtherData((prev) => ({
+      ...prev,
+      piNumber: `PI-MAN-${Math.floor(Math.random() * 10000)}`,
+    }));
   }, []);
 
   const totals = useMemo(() => {
@@ -200,6 +205,28 @@ const ProformaInvoice = () => {
         }, 100);
 
         toast.success("Invoice sent and downloaded successfully");
+
+        // Save PI data to DB so it can be found via Search Invoice
+        try {
+          await fetch("/api/saveInvoiceDetails?type=pi&piNumber=" + encodeURIComponent(otherData.piNumber), {
+            method: "PUT",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              customerName,
+              customerEmail,
+              gstIn,
+              shippingAddress,
+              billingAddress,
+              items: filteredItems,
+              discount,
+              shipping,
+              otherData,
+            }),
+          });
+        } catch {
+          // Non-critical — PI was already sent
+        }
+
         router.refresh();
       }
     } catch (error) {
@@ -447,6 +474,7 @@ const ProformaInvoice = () => {
                 />
               </div>
             </div>
+            <BankDetailsPanel />
             <div className="p-2 flex-grow min-h-[150px]">
               <p className="font-bold text-[11px] mb-1">Terms of Delivery</p>
               <textarea

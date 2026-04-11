@@ -4,6 +4,7 @@ import Image from "next/image";
 import { Address } from "../../../../models/user";
 import { toast } from "sonner";
 import { useRouter } from "next/navigation";
+import BankDetailsPanel from "@/components/proforma-invoice/BankDetailsPanel";
 
 // Interfaces
 interface IProducts {
@@ -423,6 +424,7 @@ const ProformaInvoice = ({ params }: { params: Promise<{ id: string }> }) => {
                 </p>
               </div>
             </div>
+            <BankDetailsPanel />
             <div className="p-2 flex-grow min-h-[150px] flex flex-col">
               <p className="font-bold text-[11px] mb-1">Terms of Delivery</p>
               <textarea
