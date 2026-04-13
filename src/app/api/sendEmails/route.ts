@@ -262,7 +262,7 @@ export async function POST(req: Request) {
     // 6. Send Email
     const { data: emailResult, error: emailError } = await resend.emails.send({
       from: "sales@electrochembattery.com",
-      to: "sagar9031736538@gmail.com",
+      to: email,
       subject: `Proforma Invoice ${piNumber} - ElectroChem`,
        html: `
           <div style="font-family: Arial, sans-serif; color: #333; line-height: 1.6;">
