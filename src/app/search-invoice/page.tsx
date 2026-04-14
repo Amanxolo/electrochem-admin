@@ -39,7 +39,7 @@ interface PIData {
   piNumber: string;
   customerName: string;
   customerEmail: string;
-  gstIn: string;
+  gstIn?: string;
   shippingAddress: Address;
   billingAddress: Address;
   items: PIItem[];
@@ -144,7 +144,6 @@ function PIEditor({ pi, onBack }: { pi: PIData; onBack: () => void }) {
   const [otherData, setOtherData] = useState<OtherData>(pi.otherData);
   const [customerName, setCustomerName] = useState(pi.customerName);
   const [customerEmail, setCustomerEmail] = useState(pi.customerEmail);
-  const [gstIn, setGstIn] = useState(pi.gstIn ?? "");
   const [shippingAddress, setShippingAddress] = useState<Address>(pi.shippingAddress);
   const [billingAddress, setBillingAddress] = useState<Address>(pi.billingAddress);
   const [saving, setSaving] = useState(false);
@@ -203,7 +202,7 @@ function PIEditor({ pi, onBack }: { pi: PIData; onBack: () => void }) {
         body: JSON.stringify({
           email: customerEmail,
           customerName,
-          gstIn,
+          gstIn: pi.gstIn ?? "",
           shippingAddress,
           billingAddress,
           items,
@@ -244,7 +243,6 @@ function PIEditor({ pi, onBack }: { pi: PIData; onBack: () => void }) {
           body: JSON.stringify({
             customerName,
             customerEmail,
-            gstIn,
             shippingAddress,
             billingAddress,
             items,
@@ -341,12 +339,6 @@ function PIEditor({ pi, onBack }: { pi: PIData; onBack: () => void }) {
                 className="font-bold text-[16px] uppercase w-full border-2 border-blue-400 p-1 mb-1"
                 value={customerName}
                 onChange={(e) => setCustomerName(e.target.value)}
-              />
-              <input
-                placeholder="CUSTOMER GST IN"
-                className="font-bold text-[16px] uppercase w-full border-2 border-blue-400 p-1 mb-1"
-                value={gstIn}
-                onChange={(e) => setGstIn(e.target.value)}
               />
               <textarea
                 placeholder="STREET ADDRESS"
