@@ -1,11 +1,11 @@
 import { NextRequest, NextResponse } from "next/server";
 import { dbConnect } from "../../../../models/dbconnect";
 import { Order } from "../../../../models/order";
-import { Address,User, OrderItem } from "../../../../models/user";
+import { Address, User, OrderItem } from "../../../../models/user";
 import { Payment, IPayment } from "../../../../models/payment";
 import { Product } from "../../../../models/product";
 import { Types } from "mongoose";
-import {UserPrice,IUserPrice,} from "../../../../models/userprice";
+import { UserPrice, IUserPrice } from "../../../../models/userprice";
 
 import mongoose from "mongoose";
 
@@ -21,7 +21,6 @@ export interface IPopulatedPayment {
   amount: number;
   payment_mode: string;
   payment_status: string;
-
 }
 interface IProduct {
   _id: mongoose.Types.ObjectId | string;
@@ -43,7 +42,14 @@ export interface IOrder {
   totalAmount: number;
   shippingAddress: Address;
   billingAddress: Address;
-  status: 'not-verified' | 'pending' | 'placed' | 'processing' | 'shipped' | 'delivered' | 'cancelled';
+  status:
+    | "not-verified"
+    | "pending"
+    | "placed"
+    | "processing"
+    | "shipped"
+    | "delivered"
+    | "cancelled";
   createdAt: string | Date;
   payment?: IPopulatedPayment;
   items: IItems[];
@@ -55,7 +61,7 @@ export async function GET(req: NextRequest) {
     const url = new URL(req.url);
     const queryType: string | null = url.searchParams.get("queryType");
     let orders;
-    let userEmailId:string | null
+    let userEmailId: string | null;
     switch (queryType) {
       case "orderById":
         const orderId = url.searchParams.get("id");
@@ -75,7 +81,7 @@ export async function GET(req: NextRequest) {
           .populate({
             path: "payment",
             model: Payment,
-            select: "amount payment_mode payment_status",
+            select: "amount payment_mode payment_status paidAmount",
           })
           .populate({
             path: "items.product_id",
@@ -84,7 +90,8 @@ export async function GET(req: NextRequest) {
           })
           .select(
             "_id user totalAmount shippingAddress billingAddress status createdAt payment items.product_id items.quantity items.Price isEmailSent",
-          ).lean<IOrder>();
+          )
+          .lean<IOrder>();
 
         if (!singleOrder) {
           return NextResponse.json(
@@ -97,45 +104,43 @@ export async function GET(req: NextRequest) {
 
         const userPriceDoc = await UserPrice.findOne({
           user: userId,
-        }).lean<IUserPrice>(); 
-       
+        }).lean<IUserPrice>();
+
         const userPriceMapItem = new Map();
         if (userPriceDoc && userPriceDoc.customPrices) {
-          userPriceDoc.customPrices.forEach((cp:ICustomPrice) => {
+          userPriceDoc.customPrices.forEach((cp: ICustomPrice) => {
             userPriceMapItem.set(cp.product_id.toString(), cp.price);
           });
         }
-        let newSubTotal:number = 0;
-        let taxAmount:number = 0;
+        let newSubTotal: number = 0;
+        let taxAmount: number = 0;
 
         for (const item of singleOrder.items) {
           const productId = item.product_id._id.toString();
 
-          
           if (userPriceMapItem.has(productId)) {
             item.Price = userPriceMapItem.get(productId);
           }
 
-          const lineTotal:number = item.Price * item.quantity;
+          const lineTotal: number = item.Price * item.quantity;
           newSubTotal += lineTotal;
 
           const category = item.product_id.productCategory.toLowerCase().trim();
-          
+
           const isCharger = category === "charger" || category === "chargers";
 
           // Calculate tax based on category (5% for chargers, 18% for others)
           taxAmount += isCharger ? lineTotal * 0.05 : lineTotal * 0.18;
         }
 
-        
         singleOrder.totalAmount = newSubTotal + taxAmount;
         return NextResponse.json(
           { allPlacedOrders: [singleOrder] },
           { status: 200 },
         );
       case "allOrders":
-        userEmailId=url.searchParams.get("emailId")
-    
+        userEmailId = url.searchParams.get("emailId");
+
         const allOrders = await Order.find({
           user: { $exists: true },
           payment: { $exists: true },
@@ -144,12 +149,12 @@ export async function GET(req: NextRequest) {
             path: "user",
             model: User,
             select: "name email userType",
-            match:userEmailId?{email:userEmailId}:{}
+            match: userEmailId ? { email: userEmailId } : {},
           })
           .populate({
             path: "payment",
             model: Payment,
-            select: "amount payment_mode payment_status",
+            select: "amount payment_mode payment_status paidAmount",
           })
           .populate({
             path: "items.product_id",
@@ -166,7 +171,9 @@ export async function GET(req: NextRequest) {
             { status: 401 },
           );
         }
-        const allPlacedOrders=allOrders.filter((order)=>order.user!==null)
+        const allPlacedOrders = allOrders.filter(
+          (order) => order.user !== null,
+        );
         return NextResponse.json({ allPlacedOrders }, { status: 200 });
       // case "forVerification":
       //   const allOrders = await Order.find({
@@ -201,7 +208,7 @@ export async function GET(req: NextRequest) {
       //   }
       //   return NextResponse.json({ orders }, { status: 200 });
       case "unVerifiedOrders":
-        userEmailId=url.searchParams.get("emailId")
+        userEmailId = url.searchParams.get("emailId");
         const unVerifiedOrders = await Order.find({
           status: "not-verified",
           user: { $exists: true },
@@ -210,8 +217,7 @@ export async function GET(req: NextRequest) {
             path: "user",
             model: User,
             select: "name email userType",
-            match: userEmailId?{email:userEmailId}:{},
-            
+            match: userEmailId ? { email: userEmailId } : {},
           })
           .populate({
             path: "payment",
@@ -228,9 +234,7 @@ export async function GET(req: NextRequest) {
           )
           .lean();
 
-        orders = unVerifiedOrders.filter(
-          (order) => order.user !== null,
-        );
+        orders = unVerifiedOrders.filter((order) => order.user !== null);
         if (!unVerifiedOrders) {
           return NextResponse.json(
             { message: "Error finding Orders" },
@@ -377,8 +381,17 @@ export async function PUT(req: NextRequest) {
           const payment = new Payment(paymentPayload);
           await payment.save({ session });
           await order.save({ session });
-          user.order.push(order._id);
-          await user.save({ session });
+          await User.findByIdAndUpdate(
+            user._id,
+            {
+              $push: {
+                order: order._id,
+              },
+            },
+            { session },
+          );
+          // user.order.push(order._id);
+          // await user.save({ session });
           await session.commitTransaction();
           return NextResponse.json(
             { message: `Order for ${orderId} placed successfully.` },
