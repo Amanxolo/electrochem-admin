@@ -94,9 +94,22 @@ export default function Navbar() {
           <Link href="/complaints" className={linkClass}>
             Complaints
           </Link>
-          <Link href="/invoices" className={linkClass}>
-            Invoices
-          </Link>
+
+          <div className="flex flex-col gap-1">
+            <select
+              name="invoices"
+              id="invoices"
+              value=""
+              onChange={(event) => {
+                if (event.target.value) router.push(event.target.value);
+              }}
+              className="border-none w-20 rounded bg-transparent text-sm outline-none focus:ring-2 focus:ring-green-500"
+            >
+              <option value="">Invoices</option>
+              <option value="/invoices">Upload Invoice</option>
+              <option value="/search-invoice">Search Invoice</option>
+            </select>
+          </div>
 
           <div className="flex flex-col gap-1 pointer-cursor">
             <select

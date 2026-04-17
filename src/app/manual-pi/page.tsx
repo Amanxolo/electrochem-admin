@@ -3,6 +3,7 @@ import React, { useState, useMemo, useEffect } from "react";
 import Image from "next/image";
 import { toast } from "sonner";
 import { useRouter } from "next/navigation";
+import BankDetailsPanel from "@/components/proforma-invoice/BankDetailsPanel";
 
 export interface Address {
   type: "billing" | "shipping";
@@ -73,7 +74,7 @@ const ProformaInvoice = () => {
   const [shipping, setShipping] = useState<number>(0);
   const [verifying, setVerifying] = useState(false);
   const [otherData, setOtherData] = useState<IOtherData>({
-    piNumber: `PI-MAN-${Math.floor(Math.random() * 10000)}`,
+    piNumber: "",
     validUntil: "",
     paymentMode: "Bank Transfer",
     supplierReferance: "",
@@ -85,6 +86,10 @@ const ProformaInvoice = () => {
 
   useEffect(() => {
     setMounted(true);
+    setOtherData((prev) => ({
+      ...prev,
+      piNumber: `PI-MAN-${Math.floor(Math.random() * 10000)}`,
+    }));
   }, []);
 
   const totals = useMemo(() => {
@@ -200,6 +205,28 @@ const ProformaInvoice = () => {
         }, 100);
 
         toast.success("Invoice sent and downloaded successfully");
+
+        // Save PI data to DB so it can be found via Search Invoice
+        try {
+          await fetch("/api/saveInvoiceDetails?type=pi&piNumber=" + encodeURIComponent(otherData.piNumber), {
+            method: "PUT",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              customerName,
+              customerEmail,
+              gstIn,
+              shippingAddress,
+              billingAddress,
+              items: filteredItems,
+              discount,
+              shipping,
+              otherData,
+            }),
+          });
+        } catch {
+          // Non-critical — PI was already sent
+        }
+
         router.refresh();
       }
     } catch (error) {
@@ -605,16 +632,24 @@ const ProformaInvoice = () => {
           </tbody>
           <tfoot className="border-t-[1.5px] border-black font-medium text-[14px]">
             <tr>
-              <td colSpan={7} className="text-right p-1 px-4">
+              <td
+                rowSpan={7}
+                colSpan={4}
+                className="border-t-[1.5px] border-r-[1.5px] border-black p-2 align-top text-left"
+              >
+                <BankDetailsPanel variant="table" />
+              </td>
+              <td colSpan={3} className="text-right p-1 px-4">
                 Subtotal
               </td>
               <td className="text-right p-1 px-4 pr-4 border-l border-black/5">
                 {totals.subtotal.toFixed(2)}
               </td>
+              <td className="print:hidden border-t-[1.5px] border-black" />
             </tr>
             <tr>
               <td
-                colSpan={7}
+                colSpan={3}
                 className="text-right p-1 px-4 font-bold text-gray-500"
               >
                 Discount
@@ -627,10 +662,11 @@ const ProformaInvoice = () => {
                   className="w-full text-right border-2 border-blue-400 p-1 pr-4 font-bold"
                 />
               </td>
+              <td className="print:hidden" />
             </tr>
             <tr>
               <td
-                colSpan={7}
+                colSpan={3}
                 className="text-right p-1 px-4 font-bold text-gray-500"
               >
                 Shipping
@@ -643,36 +679,41 @@ const ProformaInvoice = () => {
                   className="w-full text-right border-2 border-blue-400 p-1 pr-4 font-bold"
                 />
               </td>
+              <td className="print:hidden" />
             </tr>
             <tr>
-              <td colSpan={7} className="text-right p-1 px-4">
+              <td colSpan={3} className="text-right p-1 px-4">
                 CGST
               </td>
               <td className="text-right p-1  pr-4">{totals.cgst.toFixed(2)}</td>
+              <td className="print:hidden" />
             </tr>
             <tr>
-              <td colSpan={7} className="text-right p-1 px-4">
+              <td colSpan={3} className="text-right p-1 px-4">
                 SGST
               </td>
               <td className="text-right p-1 px-4 pr-4">
                 {totals.sgst.toFixed(2)}
               </td>
+              <td className="print:hidden" />
             </tr>
             <tr className="border-b-[1.5px] border-black">
-              <td colSpan={7} className="text-right p-1 px-4">
+              <td colSpan={3} className="text-right p-1 px-4">
                 IGST
               </td>
               <td className="text-right p-1 px-4 pr-4">
                 {totals.igst.toFixed(2)}
               </td>
+              <td className="print:hidden" />
             </tr>
             <tr className="font-bold text-[18px]">
-              <td colSpan={7} className="text-right p-3  uppercase">
+              <td colSpan={3} className="text-right p-3  uppercase">
                 Total (in Rs)
               </td>
               <td className="text-right p-3 px-4 pr-4 font-black border-l border-black/5">
                 ₹{totals.finalTotal.toFixed(2)}
               </td>
+              <td className="print:hidden" />
             </tr>
           </tfoot>
         </table>

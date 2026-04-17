@@ -4,6 +4,7 @@ import chromium from "@sparticuz/chromium";
 import type { PuppeteerNode, Browser } from "puppeteer-core";
 import fs from "fs";
 import path from "path";
+import mongoose from "mongoose";
 import { dbConnect } from "../../../../models/dbconnect";
 import { User } from "../../../../models/user";
 import { Order } from "../../../../models/order";
@@ -27,6 +28,22 @@ const logoPath = path.join(
 // Module caching
 let cachedTemplate: string | null = null;
 let cachedLogo: string | null = null;
+
+const proformaInvoiceSchema = new mongoose.Schema(
+  {
+    piNumber: { type: String, index: true },
+    customerName: String,
+    customerEmail: String,
+    gstIn: String,
+    shippingAddress: mongoose.Schema.Types.Mixed,
+    billingAddress: mongoose.Schema.Types.Mixed,
+    items: [mongoose.Schema.Types.Mixed],
+    discount: Number,
+    shipping: Number,
+    otherData: mongoose.Schema.Types.Mixed,
+  },
+  { timestamps: true },
+);
 
 if (isProduction) {
   const mod = await import("puppeteer-core");
@@ -61,6 +78,13 @@ export async function POST(req: Request) {
     };
 
     const { items, email, orderId, discount, shipping, otherData } = body;
+
+    if (!otherData?.piNumber || String(otherData.piNumber).trim() === "") {
+      return NextResponse.json(
+        { message: "PI number (otherData.piNumber) is required." },
+        { status: 400 },
+      );
+    }
 
     if (!items || items.length === 0) {
       return NextResponse.json(
@@ -206,7 +230,35 @@ export async function POST(req: Request) {
       printBackground: true,
       margin: { top: "10mm", right: "10mm", bottom: "10mm", left: "10mm" },
     });
-    
+
+    // Persist PI before email so /search-invoice works even if Resend fails.
+    const ProformaInvoice =
+      mongoose.models.ProformaInvoice ||
+      mongoose.model("ProformaInvoice", proformaInvoiceSchema);
+
+    await ProformaInvoice.findOneAndUpdate(
+      {
+        $or: [{ piNumber }, { "otherData.piNumber": piNumber }],
+      },
+      {
+        $set: {
+          piNumber,
+          customerName:
+            (user as { companyName?: string; name: string }).companyName ||
+            user.name,
+          customerEmail: user.email,
+          gstIn: user.documents?.gstin || "",
+          shippingAddress: primaryAddress,
+          billingAddress,
+          items,
+          discount: discount || 0,
+          shipping: shipping || 0,
+          otherData,
+        },
+      },
+      { new: true, upsert: true, setDefaultsOnInsert: true },
+    );
+
     // 6. Send Email
     const { data: emailResult, error: emailError } = await resend.emails.send({
       from: "sales@electrochembattery.com",
