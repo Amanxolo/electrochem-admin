@@ -88,13 +88,26 @@ export default function AllOrdersPage() {
     fetchOrders();
   }, []);
 
-  const handleStatusChange = async (orderId: string, newStatus: string) => {
+  const handleStatusChange = async (orderId: string, newStatus: string,currentStatus:string) => {
+     
+
+    // console.log("Attempting to change status from", currentStatus, "to", newStatus ,"for order", orderId);
+    if(currentStatus.toLowerCase()==="cancelled"){
+      toast.error("Cannot change status of a cancelled order");
+      return;
+    }
+    if(newStatus.toLowerCase()==="cancelled"){
+      const confirmCancel = window.confirm(
+        "Are you sure you want to cancel this order? This action cannot be undone.",
+      );
+      if (!confirmCancel) return;
+    }
     try {
       setUpdatingId(orderId);
       const res = await fetch(`/api/orders?queryType=statusUpdate`, {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ orderId, status: newStatus }),
+        body: JSON.stringify({ orderId, statustoUpdate: newStatus ,currentStatus}),
       });
       if (res.ok) {
         toast.success("Order Status Updated");
@@ -105,6 +118,9 @@ export default function AllOrdersPage() {
               : o,
           ),
         );
+      }else {
+        const data = await res.json();
+        toast.error(data.message || "Failed to update status");
       }
     } catch (err) {
       toast.error("Error updating status");
@@ -239,9 +255,9 @@ export default function AllOrdersPage() {
                     <div className="relative inline-block w-full sm:w-auto">
                       <select
                         value={order.status}
-                        disabled={updatingId === order._id}
+                        disabled={updatingId === order._id || order.status.toLowerCase() === "cancelled"}
                         onChange={(e) =>
-                          handleStatusChange(order._id, e.target.value)
+                          handleStatusChange(order._id, e.target.value,order.status)
                         }
                         className={`w-full sm:w-auto text-[10px] font-black py-2 px-4 rounded-lg border uppercase tracking-wider outline-none cursor-pointer transition-all appearance-none pr-10 ${
                           order.status === "delivered"

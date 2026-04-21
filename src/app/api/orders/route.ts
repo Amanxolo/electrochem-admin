@@ -412,15 +412,86 @@ export async function PUT(req: NextRequest) {
         }
 
       case "statusUpdate":
-        body = await req.json();
-        if (!body.orderId || !body.status) {
+        body = await req.json() as { orderId: string; statustoUpdate: string ,currentStatus:string};
+        if (!body.orderId || !body.statustoUpdate || !body.currentStatus) {
           return NextResponse.json(
             { message: "Parameters are missing." },
             { status: 401 },
           );
         }
+        if(body.currentStatus.toLowerCase()==="cancelled"){
+          return NextResponse.json(
+            { message: "Cannot update status of a cancelled order." },
+            { status: 400 },
+          );
+        }
+        if(body.statustoUpdate.toLowerCase()==="cancelled"){
+            const session = await mongoose.startSession();
+            session.startTransaction();
+            try {
+              const orderToCancel = await Order.findById(body.orderId).session(session);
+              if (!orderToCancel) {
+                await session.abortTransaction();
+                return NextResponse.json(
+                  { message: "Order Not Found" },
+                  { status: 404 },
+                );
+              }
+              if (orderToCancel.status.toLowerCase() === "cancelled") {
+                await session.abortTransaction();
+                return NextResponse.json(
+                  { message: "Order is already cancelled." },
+                  { status: 400 },
+                );
+              }
+              const productIDs = orderToCancel.items.map(
+                (item: OrderItem) => item.product_id,
+              );
+              const productsInDb = await Product.find({
+                _id: { $in: productIDs },
+              }).session(session);
+              const productMap = new Map(
+                productsInDb.map((p) => [p._id.toString(), p]),
+              );
+
+              const stockUpdates = [];
+              for (const item of orderToCancel.items) {
+                const product = productMap.get(item.product_id.toString());
+                if (!product) continue; 
+
+                stockUpdates.push({
+                  updateOne: {
+                    filter: { _id: product._id },
+                    update: { $inc: { stock: item.quantity } },
+                  },
+                });
+              }
+              if (stockUpdates.length > 0) {
+                await Product.bulkWrite(stockUpdates, { session });
+              }
+
+              orderToCancel.status = "cancelled";
+              await orderToCancel.save({ session });
+              await session.commitTransaction();
+              return NextResponse.json(
+                { message: "Order Cancelled and stock updated successfully." },
+                { status: 200 },
+              );
+            }catch(err){
+            await session.abortTransaction();
+            return NextResponse.json(
+              {
+                message: "Internal Server Error",
+                error: err instanceof Error ? err.message : String(err),
+              },
+              { status: 501 },
+            );
+            }finally{
+            await session.endSession();
+            }
+          }
         const orderbyId = await Order.findById(body.orderId);
-        orderbyId.status = body.status;
+        orderbyId.status = body.statustoUpdate;
         await orderbyId.save();
 
         return NextResponse.json(
