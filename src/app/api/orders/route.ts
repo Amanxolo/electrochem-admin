@@ -419,9 +419,9 @@ export async function PUT(req: NextRequest) {
             { status: 401 },
           );
         }
-        if(body.currentStatus.toLowerCase()==="cancelled"){
+        if(body.currentStatus.toLowerCase()==="cancelled" || body.currentStatus.toLowerCase()==="delivered"){
           return NextResponse.json(
-            { message: "Cannot update status of a cancelled order." },
+            { message: "Cannot update status of a Cancelled/Delivered order." },
             { status: 400 },
           );
         }
@@ -491,6 +491,12 @@ export async function PUT(req: NextRequest) {
             }
           }
         const orderbyId = await Order.findById(body.orderId);
+        if (!orderbyId) {
+          return NextResponse.json(
+            { message: "Order Not Found" },
+            { status: 404 },
+          );
+        }
         orderbyId.status = body.statustoUpdate;
         await orderbyId.save();
 

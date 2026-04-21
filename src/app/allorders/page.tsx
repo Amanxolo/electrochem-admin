@@ -92,15 +92,21 @@ export default function AllOrdersPage() {
      
 
     // console.log("Attempting to change status from", currentStatus, "to", newStatus ,"for order", orderId);
-    if(currentStatus.toLowerCase()==="cancelled"){
-      toast.error("Cannot change status of a cancelled order");
+    if(currentStatus.toLowerCase()==="cancelled" || currentStatus.toLowerCase()==="delivered"){
+      toast.error("Cannot change status of a cancelled or delivered order");
       return;
     }
-    if(newStatus.toLowerCase()==="cancelled"){
+    if(newStatus.toLowerCase()==="cancelled" ){
       const confirmCancel = window.confirm(
         "Are you sure you want to cancel this order? This action cannot be undone.",
       );
       if (!confirmCancel) return;
+    }
+    if(newStatus.toLowerCase()==="delivered" ){
+      const confirmDeliver = window.confirm(
+        "Are you sure you want to mark this order as delivered? This action cannot be undone.",
+      );
+      if (!confirmDeliver) return;
     }
     try {
       setUpdatingId(orderId);
