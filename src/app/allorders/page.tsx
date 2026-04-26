@@ -26,6 +26,7 @@ interface IPayment {
 interface IUser {
   _id: string;
   name: string;
+  companyName?: string;
   email: string;
   userType: "reseller" | "oem" | "individual";
 }
@@ -379,7 +380,7 @@ export default function AllOrdersPage() {
                         <button
                           onClick={() =>
                             router.push(
-                              `/allorders/payments/${order.payment._id}`,
+                              `/allorders/payments/${order.payment._id}?userName=${order.user.companyName || order.user.name}`,
                             )
                           }
                           className="ml-[75%] py-2 px-4 text-blue-700 cursor-pointer "

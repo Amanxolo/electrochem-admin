@@ -4,6 +4,7 @@ import { IPartialPayments, IPayment } from "../../../../../models/payment";
 import { Plus, ArrowLeft, History, CheckCircle2 } from "lucide-react";
 import Link from "next/link";
 import { toast } from "sonner";
+import { useSearchParams } from "next/navigation";
 
 export default function PaymentDetailsPage({
   params,
@@ -11,6 +12,8 @@ export default function PaymentDetailsPage({
   params: Promise<{ id: string }>;
 }) {
   const { id } = use(params);
+  const searchParams=useSearchParams();
+  const userName=searchParams.get("userName");
   const [paymentData, setPaymentData] = useState<IPayment | null>(null);
   const [loading, setLoading] = useState(true);
 
@@ -67,13 +70,18 @@ export default function PaymentDetailsPage({
       return toast.error("Payment data not loaded");
     }
     const remaining = paymentData.amount - (paymentData.paidAmount || 0);
+    let minAmount:number=0.2*paymentData.amount;
+    if(remaining<minAmount){
+      minAmount=remaining;
+    }
+   
     if (
       !manualAmount ||
-      Number(manualAmount) <= 0 ||
+      Number(manualAmount) < minAmount ||
       Number(manualAmount) > remaining
     )
       return toast.error(
-        "Enter a valid amount. Remaining balance is ₹" + remaining,
+        "Enter a valid amount. Remaining balance is ₹" + remaining + " and minimum allowed is ₹"+minAmount.toFixed(2),
       );
     if (!date) return toast.error("Please select a valid date");
     setIsSubmitting(true);
@@ -133,6 +141,7 @@ export default function PaymentDetailsPage({
           <h1 className="text-2xl font-bold text-green-700">
             Payment Details{" "}
           </h1>
+          <p className="text-sm text-gray-800 font-mono">Company Name:{userName}</p>
           <p className="text-sm text-gray-500 font-mono">ID: {id}</p>
           <p className="text-sm text-gray-500 font-mono">
             Payment Status:{" "}

@@ -53,13 +53,18 @@ export async function PUT(req: NextRequest) {
         { status: 404 },
       );
     const remainingBalance: number = payment.amount - (payment?.paidAmount || 0);
+    let minAmount: number = 0.2 * payment.amount;
+    if (remainingBalance < minAmount) {
+      minAmount = remainingBalance;
+    }
+    
     if (payment.payment_status === "paid") {
       return NextResponse.json(
         { message: "This order is already fully paid." },
         { status: 400 },
       );
     }
-    if (!amount || remainingBalance < amount || amount < 0)
+    if (!amount || remainingBalance < amount || amount < minAmount)
       throw new Error("Valid Amount not found.");
 
     const paymentDetails: IPartialPayments = {
