@@ -1,7 +1,6 @@
 "use client";
 import { useState } from "react";
 import { UploadCloud, X, FileText, Search } from "lucide-react";
-import pdfToText from "react-pdftotext";
 import { toast } from "sonner";
 import { invoiceProps } from "../../../models/invoice";
 
@@ -21,9 +20,11 @@ const InvoicePopup = () => {
     setDate("");
   };
 
-  const handleExtract = () => {
+  const handleExtract = async () => {
     if (file) {
       console.log("Extracting details from file:", file.name);
+      const { default: pdfToText } = await import("react-pdftotext");
+
       pdfToText(file)
         .then((text) => {
           const regexForInvoice =

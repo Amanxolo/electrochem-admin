@@ -1,5 +1,5 @@
 "use client";
-import { useState, useEffect, use } from "react";
+import { useState, useEffect, use, useCallback } from "react";
 import { IPartialPayments, IPayment } from "../../../../../models/payment";
 import { Plus, ArrowLeft, History, CheckCircle2 } from "lucide-react";
 import Link from "next/link";
@@ -22,18 +22,7 @@ export default function PaymentDetailsPage({
   const [manualRef, setManualRef] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
 
-  useEffect(() => {
-    fetchPaymentDetails();
-  }, [id]);
-  const formatDateForInput = (date: Date | null) => {
-    if (!date) return "";
-
-    const year = date.getFullYear();
-    const month = String(date.getMonth() + 1).padStart(2, "0");
-    const day = String(date.getDate()).padStart(2, "0");
-    return `${year}-${month}-${day}`;
-  };
-  const fetchPaymentDetails = async () => {
+  const fetchPaymentDetails = useCallback(async () => {
     try {
       const res = await fetch(`/api/paymentsDetail?paymentId=${id}`);
       const data = await res.json();
@@ -54,7 +43,6 @@ export default function PaymentDetailsPage({
           if (data.payment.payment_status === "paid")
             data.payment.paidAmount = Number(prevData.amount);
         }
-        //  console.log(data.payment)
         setPaymentData(data.payment);
       }
     } catch (err) {
@@ -63,8 +51,20 @@ export default function PaymentDetailsPage({
     } finally {
       setLoading(false);
     }
-  };
+  }, [id]);
 
+  useEffect(() => {
+    fetchPaymentDetails();
+  }, [fetchPaymentDetails]);
+
+  const formatDateForInput = (date: Date | null) => {
+    if (!date) return "";
+
+    const year = date.getFullYear();
+    const month = String(date.getMonth() + 1).padStart(2, "0");
+    const day = String(date.getDate()).padStart(2, "0");
+    return `${year}-${month}-${day}`;
+  };
   const handleAddManualPayment = async () => {
     if (!paymentData) {
       return toast.error("Payment data not loaded");

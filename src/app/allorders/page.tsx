@@ -237,11 +237,11 @@ export default function AllOrdersPage() {
         ) : (
           <div className="space-y-6">
             {processedOrders.map((order) => {
-              let paidAmount: number = 0;
-              (order.payment?.razorpay_order_id &&
-              order.payment.payment_status) === "paid"
-                ? (paidAmount = order.totalAmount)
-                : (paidAmount = order.payment?.paidAmount || 0);
+              const paidAmount =
+                order.payment?.razorpay_order_id &&
+                order.payment.payment_status === "paid"
+                  ? order.totalAmount
+                  : order.payment?.paidAmount || 0;
               return (
                 <div
                   key={order._id}
