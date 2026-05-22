@@ -187,6 +187,7 @@ export async function POST(req: Request) {
       .replace(/{{notes}}/g, otherData.otherReferance)
       .replace(/{{paymentMode}}/g, otherData.paymentMode)
       .replace(/{{dispatch}}/g, otherData.dispatchThru)
+      .replace(/{{dispatchDate}}/g, otherData.dispatchDate || "N/A")
       .replace(/{{termsOfDelivery}}/g, otherData.termOfDelivery)
       .replace(/{{customerGSTIN}}/g, gstIn || "N/A")
       .replace(/{{customerName}}/g, customerName || "Valued Customer")

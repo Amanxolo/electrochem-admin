@@ -27,6 +27,7 @@ interface PIItem {
 interface OtherData {
   piNumber: string;
   validUntil: string;
+  dispatchDate: string;
   paymentMode: string;
   supplierReferance: string;
   otherReferance: string;
@@ -470,6 +471,15 @@ function PIEditor({ pi, onBack }: { pi: PIData; onBack: () => void }) {
                 />
               </div>
               <div className="border-b-[1.5px] border-r-[1.5px] border-black p-2 min-h-[60px]">
+                <p className="font-bold text-[11px]">Dispatch Date</p>
+                <input
+                  type="date"
+                  value={otherData.dispatchDate ?? ""}
+                  onChange={(e) => handleOther("dispatchDate", e.target.value)}
+                  className={inputCls}
+                />
+              </div>
+              <div className="border-b-[1.5px] border-black p-2 min-h-[60px]">
                 <p className="font-bold text-[11px]">Dispatch Thru</p>
                 <input
                   type="text"
@@ -480,6 +490,10 @@ function PIEditor({ pi, onBack }: { pi: PIData; onBack: () => void }) {
               </div>
             </div>
             <div className="p-2 flex-grow min-h-[150px]">
+              <p className="font-bold text-[11px] mb-1">Destination</p>
+              <p className="border-b-[1.5px] border-black pb-2 mb-2">
+                {shippingAddress.city}, {shippingAddress.state}
+              </p>
               <p className="font-bold text-[11px] mb-1">Terms of Delivery</p>
               <textarea
                 value={otherData.termOfDelivery}
