@@ -183,15 +183,16 @@ export async function POST(req: Request) {
       .replace(/{{notes}}/g, otherData.otherReferance)
       .replace(/{{paymentMode}}/g, otherData.paymentMode)
       .replace(/{{dispatch}}/g, otherData.dispatchThru)
+      .replace(/{{dispatchDate}}/g, otherData.dispatchDate || "N/A")
       .replace(/{{termsOfDelivery}}/g, otherData.termOfDelivery)
       .replace(/{{customerName}}/g, (user as { companyName?: string; name: string }).companyName || user.name || "Valued Customer")
       .replace(
         /{{customerAddress}}/g,
-        `${primaryAddress?.street}, ${primaryAddress?.city}, ${primaryAddress?.state}`,
+        `${primaryAddress?.street}, ${primaryAddress?.city}, ${primaryAddress?.state} ${primaryAddress?.zipCode}, ${primaryAddress?.country}`,
       )
       .replace(
         /{{billingAddress}}/g,
-        `${billingAddress?.street}, ${billingAddress?.city}, ${billingAddress?.state}`,
+        `${billingAddress?.street}, ${billingAddress?.city}, ${billingAddress?.state} ${billingAddress?.zipCode}, ${billingAddress?.country}`,
       )
       .replace(/{{customerPhone}}/g, primaryAddress?.phone || "N/A")
       .replace(/{{billingPhone}}/g, billingAddress?.phone || "N/A")

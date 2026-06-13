@@ -68,11 +68,26 @@ export default function Navbar() {
         <nav className="flex items-center gap-4 md:gap-6 overflow-x-auto no-scrollbar ml-auto">
           <HeaderCartButton />
 
-          <Link href="/products" className={linkClass}>
-            Products
-          </Link>
+         
+          <div className="flex flex-col gap-2 text-white pointer-cursor">
+            <select
+              name="products"
+              id="products"
+              
+              value=""
+              onChange={(event) => {
+                router.push(event.target.value);
+              }}
+              className=" border-none w-20 rounded bg-transparent text-sm outline-none focus:ring-2 focus:ring-green-500"
+            >
+              <option value="">Products</option>
+              <option value="/products">All Products</option>
 
-          <div className="flex flex-col gap-1">
+              <option value="/products-directory">Products-Directory</option>
+              
+            </select>
+          </div>
+          <div className="flex flex-col gap-1 text-white pointer-cursor">
             <select
               name="orders"
               id="orders"
@@ -95,7 +110,7 @@ export default function Navbar() {
             Complaints
           </Link>
 
-          <div className="flex flex-col gap-1">
+          <div className="flex flex-col gap-1 text-white pointer-cursor">
             <select
               name="invoices"
               id="invoices"
@@ -111,7 +126,7 @@ export default function Navbar() {
             </select>
           </div>
 
-          <div className="flex flex-col gap-1 pointer-cursor">
+          <div className="flex flex-col gap-1 text-white pointer-cursor">
             <select
               name="users"
               id="users"

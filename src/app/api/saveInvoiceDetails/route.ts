@@ -60,6 +60,7 @@ function buildPiFromOrder(
     otherData: {
       piNumber: derivedPi,
       validUntil: "",
+      dispatchDate: "",
       paymentMode: "Bank Transfer",
       supplierReferance: "",
       otherReferance: "Standard",
