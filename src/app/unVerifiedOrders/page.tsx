@@ -62,8 +62,7 @@ export default function OrderVerificationPage() {
       setLoading(false)
     }
   }
-  useEffect(() => {
-    const fetchOrders = async () => {
+  const fetchOrders = async () => {
       try {
         setLoading(true);
         const res = await fetch(
@@ -81,13 +80,36 @@ export default function OrderVerificationPage() {
         setLoading(false);
       }
     };
+  useEffect(() => {
+    
     fetchOrders();
   }, []);
 
   const generateInvoice = (orderId: string) => {
     router.push(`unVerifiedOrders/${orderId}`);
   };
-
+  const removeOrder=async(orderId:string)=>{
+    try{
+      const resPrompt = confirm("This will permanently delete the Order.")
+      if(resPrompt===false){
+        return;
+      }
+      const res=await fetch(`/api/orders?orderId=${orderId}`,{
+        method:"DELETE",
+        headers:{
+        "content-type":"application/json"
+        }
+      })
+      const data =await res.json();
+      if(!res.ok){
+        return toast.error(data.message || "Unable to delete Order.")
+      }
+      toast.success(data.message || "Order Deleted.")
+      fetchOrders();
+    }catch(err){
+      return toast.error("Unable to delete Order.")
+    }
+  }
   return (
     <div className="p-6 bg-slate-50 min-h-screen">
       <div className="max-w-7xl mx-auto">
@@ -245,15 +267,24 @@ export default function OrderVerificationPage() {
                     </div>
                   </div>
 
-                  <div className="px-6 py-4 bg-gray-50/50 border-t border-gray-100 flex justify-end gap-3">
+                  <div className="flex justify-end items-end px-6 py-4 bg-gray-50/50 border-t border-gray-100  gap-3">
                     <button
                       onClick={() => generateInvoice(order._id)}
                       className="text-xs
                        font-bold cursor-pointer bg-green-600 hover:bg-green-700 text-white px-6 py-2
-                        rounded-md shadow-sm transition-colors
+                        rounded-md shadow-sm transition-colors max-w-[150px]
                         disabled:opacity-50 disabled:cursor-not-allowed"
                     >
                       Generate PI
+                    </button>
+                    <button
+                      onClick={() => removeOrder(order._id)}
+                      className="text-xs
+                       font-bold cursor-pointer bg-red-600 hover:bg-red-700 text-white px-6 py-2
+                        rounded-md shadow-sm transition-colors max-w-[150px]
+                        disabled:opacity-50 disabled:cursor-not-allowed"
+                    >
+                      Discard PI
                     </button>
                   </div>
                 </div>
@@ -265,3 +296,6 @@ export default function OrderVerificationPage() {
     </div>
   );
 }
+
+
+
