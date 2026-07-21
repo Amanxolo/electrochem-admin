@@ -1,4 +1,11 @@
-import { ReactNode, ButtonHTMLAttributes, forwardRef } from "react"
+import {
+  ReactElement,
+  ReactNode,
+  ButtonHTMLAttributes,
+  cloneElement,
+  forwardRef,
+  isValidElement,
+} from "react"
 import { cn } from "@/lib/utils"
 
 interface ButtonProps extends ButtonHTMLAttributes<HTMLButtonElement> {
@@ -9,7 +16,6 @@ interface ButtonProps extends ButtonHTMLAttributes<HTMLButtonElement> {
 }
 
 const Button = forwardRef<HTMLButtonElement, ButtonProps>(
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   ({ className, children, variant = "default", size = "default", asChild = false, ...props }, ref) => {
     const baseStyles = "inline-flex items-center justify-center rounded-md font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:opacity-50 disabled:pointer-events-none"
     
@@ -35,6 +41,14 @@ const Button = forwardRef<HTMLButtonElement, ButtonProps>(
       sizes[size],
       className
     )
+
+    if (asChild && isValidElement(children)) {
+      const child = children as ReactElement<{ className?: string }>
+
+      return cloneElement(child, {
+        className: cn(classes, child.props.className),
+      })
+    }
     
     return (
       <button className={classes} ref={ref} {...props}>

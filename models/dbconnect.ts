@@ -1,11 +1,5 @@
 import mongoose from "mongoose";
 
-const MONGODB_URI = process.env.MONGO_URI as string;
-
-if (!MONGODB_URI) {
-  throw new Error("Please define the MONGODB_URI in .env.local");
-}
-
 declare global {
   var mongoose: {
     conn: typeof import("mongoose") | null;
@@ -20,6 +14,12 @@ if (!cached) {
 }
 
 export async function dbConnect() {
+  const mongodbUri = process.env.MONGO_URI || process.env.MONGODB_URI;
+
+  if (!mongodbUri) {
+    throw new Error("Please define MONGO_URI or MONGODB_URI in .env.local");
+  }
+
   // Reuse existing connection
   if (cached.conn) {
     return cached.conn;
@@ -29,7 +29,7 @@ export async function dbConnect() {
   for (let attempt = 0; attempt < MAX_RETRIES; attempt++) {
     try {
       if (!cached.promise) {
-        cached.promise = mongoose.connect(MONGODB_URI, {
+        cached.promise = mongoose.connect(mongodbUri, {
           bufferCommands: false,
           serverSelectionTimeoutMS: 30000,
           socketTimeoutMS: 60000,
