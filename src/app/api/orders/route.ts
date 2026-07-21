@@ -523,3 +523,29 @@ export async function PUT(req: NextRequest) {
     );
   }
 }
+
+export async function DELETE(req: NextRequest) {
+
+  try{
+    const { searchParams } = new URL(req.url);
+    const orderId= searchParams.get("orderId")
+    // console.log("orderId",orderId)
+    if(!orderId)throw new Error("OrderId is required.")
+    const res=await Order.deleteOne({_id:orderId})
+    if(res.deletedCount>0){
+      return NextResponse.json({message:"Order Removed Successfully"},{status:200})
+    }
+    return NextResponse.json({message:"Failed to delete Order "},{status:401})
+  }catch(error){
+    if (error instanceof Error) {
+      return NextResponse.json(
+        { message: "Internal Server Error", error: error.message },
+        { status: 500 },
+      );
+    }
+    return NextResponse.json(
+      { message: "Internal Server Error" },
+      { status: 500 },
+    );
+  }
+}
