@@ -140,11 +140,16 @@ export async function GET(req: NextRequest) {
         );
       case "allOrders":
         userEmailId = url.searchParams.get("emailId");
-
-        const allOrders = await Order.find({
+        const orderIdParams = url.searchParams.get("orderId");
+        const baseQuery:Record<string, unknown> = {
           user: { $exists: true },
           payment: { $exists: true },
-        })
+        };
+        if (orderIdParams) {
+          baseQuery._id = orderIdParams;
+        }
+
+        const allOrders = await Order.find(baseQuery)
           .populate({
             path: "user",
             model: User,
@@ -162,15 +167,17 @@ export async function GET(req: NextRequest) {
             select: "productName productCategory",
           })
           .select(
-            "_id user totalAmount status createdAt payment items.product_id items.quantity items.Price isEmailSent shippingAddress ",
+            "_id user totalAmount status createdAt payment items.product_id items.quantity items.Price isEmailSent shippingAddress",
           )
           .sort({ createdAt: -1 });
+
         if (!allOrders) {
           return NextResponse.json(
             { message: "Error finding Orders" },
             { status: 401 },
           );
         }
+
         const allPlacedOrders = allOrders.filter(
           (order) => order.user !== null,
         );
@@ -412,72 +419,81 @@ export async function PUT(req: NextRequest) {
         }
 
       case "statusUpdate":
-        body = await req.json() as { orderId: string; statustoUpdate: string ,currentStatus:string};
+        body = (await req.json()) as {
+          orderId: string;
+          statustoUpdate: string;
+          currentStatus: string;
+        };
         if (!body.orderId || !body.statustoUpdate || !body.currentStatus) {
           return NextResponse.json(
             { message: "Parameters are missing." },
             { status: 401 },
           );
         }
-        if(body.currentStatus.toLowerCase()==="cancelled" || body.currentStatus.toLowerCase()==="delivered"){
+        if (
+          body.currentStatus.toLowerCase() === "cancelled" ||
+          body.currentStatus.toLowerCase() === "delivered"
+        ) {
           return NextResponse.json(
             { message: "Cannot update status of a Cancelled/Delivered order." },
             { status: 400 },
           );
         }
-        if(body.statustoUpdate.toLowerCase()==="cancelled"){
-            const session = await mongoose.startSession();
-            session.startTransaction();
-            try {
-              const orderToCancel = await Order.findById(body.orderId).session(session);
-              if (!orderToCancel) {
-                await session.abortTransaction();
-                return NextResponse.json(
-                  { message: "Order Not Found" },
-                  { status: 404 },
-                );
-              }
-              if (orderToCancel.status.toLowerCase() === "cancelled") {
-                await session.abortTransaction();
-                return NextResponse.json(
-                  { message: "Order is already cancelled." },
-                  { status: 400 },
-                );
-              }
-              const productIDs = orderToCancel.items.map(
-                (item: OrderItem) => item.product_id,
-              );
-              const productsInDb = await Product.find({
-                _id: { $in: productIDs },
-              }).session(session);
-              const productMap = new Map(
-                productsInDb.map((p) => [p._id.toString(), p]),
-              );
-
-              const stockUpdates = [];
-              for (const item of orderToCancel.items) {
-                const product = productMap.get(item.product_id.toString());
-                if (!product) continue; 
-
-                stockUpdates.push({
-                  updateOne: {
-                    filter: { _id: product._id },
-                    update: { $inc: { stock: item.quantity } },
-                  },
-                });
-              }
-              if (stockUpdates.length > 0) {
-                await Product.bulkWrite(stockUpdates, { session });
-              }
-
-              orderToCancel.status = "cancelled";
-              await orderToCancel.save({ session });
-              await session.commitTransaction();
+        if (body.statustoUpdate.toLowerCase() === "cancelled") {
+          const session = await mongoose.startSession();
+          session.startTransaction();
+          try {
+            const orderToCancel = await Order.findById(body.orderId).session(
+              session,
+            );
+            if (!orderToCancel) {
+              await session.abortTransaction();
               return NextResponse.json(
-                { message: "Order Cancelled and stock updated successfully." },
-                { status: 200 },
+                { message: "Order Not Found" },
+                { status: 404 },
               );
-            }catch(err){
+            }
+            if (orderToCancel.status.toLowerCase() === "cancelled") {
+              await session.abortTransaction();
+              return NextResponse.json(
+                { message: "Order is already cancelled." },
+                { status: 400 },
+              );
+            }
+            const productIDs = orderToCancel.items.map(
+              (item: OrderItem) => item.product_id,
+            );
+            const productsInDb = await Product.find({
+              _id: { $in: productIDs },
+            }).session(session);
+            const productMap = new Map(
+              productsInDb.map((p) => [p._id.toString(), p]),
+            );
+
+            const stockUpdates = [];
+            for (const item of orderToCancel.items) {
+              const product = productMap.get(item.product_id.toString());
+              if (!product) continue;
+
+              stockUpdates.push({
+                updateOne: {
+                  filter: { _id: product._id },
+                  update: { $inc: { stock: item.quantity } },
+                },
+              });
+            }
+            if (stockUpdates.length > 0) {
+              await Product.bulkWrite(stockUpdates, { session });
+            }
+
+            orderToCancel.status = "cancelled";
+            await orderToCancel.save({ session });
+            await session.commitTransaction();
+            return NextResponse.json(
+              { message: "Order Cancelled and stock updated successfully." },
+              { status: 200 },
+            );
+          } catch (err) {
             await session.abortTransaction();
             return NextResponse.json(
               {
@@ -486,10 +502,10 @@ export async function PUT(req: NextRequest) {
               },
               { status: 501 },
             );
-            }finally{
+          } finally {
             await session.endSession();
-            }
           }
+        }
         const orderbyId = await Order.findById(body.orderId);
         if (!orderbyId) {
           return NextResponse.json(

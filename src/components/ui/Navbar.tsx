@@ -109,6 +109,9 @@ export default function Navbar() {
           <Link href="/complaints" className={linkClass}>
             Complaints
           </Link>
+           <Link href="/manual-payments-request" className={linkClass}>
+            Manual Payment Requests
+          </Link>
 
           <div className="flex flex-col gap-1 text-white pointer-cursor">
             <select

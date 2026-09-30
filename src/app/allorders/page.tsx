@@ -62,9 +62,16 @@ export default function AllOrdersPage() {
   const fetchOrders = async (idSearch?: string) => {
     try {
       setLoading(true);
-      const endpoint = idSearch
-        ? `/api/orders?queryType=allOrders&emailId=${idSearch.trim()}`
-        : `/api/orders?queryType=allOrders`;
+
+      const trimmed = idSearch?.trim() ?? "";
+      const isObjectId = /^[a-f\d]{24}$/i.test(trimmed);
+      const queryParam = trimmed
+        ? isObjectId
+          ? `&orderId=${trimmed}`
+          : `&emailId=${trimmed}`
+        : "";
+
+      const endpoint = `/api/orders?queryType=allOrders${queryParam}`;
 
       const res = await fetch(endpoint);
       if (res.ok) {
@@ -89,21 +96,26 @@ export default function AllOrdersPage() {
     fetchOrders();
   }, []);
 
-  const handleStatusChange = async (orderId: string, newStatus: string,currentStatus:string) => {
-     
-
+  const handleStatusChange = async (
+    orderId: string,
+    newStatus: string,
+    currentStatus: string,
+  ) => {
     // console.log("Attempting to change status from", currentStatus, "to", newStatus ,"for order", orderId);
-    if(currentStatus.toLowerCase()==="cancelled" || currentStatus.toLowerCase()==="delivered"){
+    if (
+      currentStatus.toLowerCase() === "cancelled" ||
+      currentStatus.toLowerCase() === "delivered"
+    ) {
       toast.error("Cannot change status of a cancelled or delivered order");
       return;
     }
-    if(newStatus.toLowerCase()==="cancelled" ){
+    if (newStatus.toLowerCase() === "cancelled") {
       const confirmCancel = window.confirm(
         "Are you sure you want to cancel this order? This action cannot be undone.",
       );
       if (!confirmCancel) return;
     }
-    if(newStatus.toLowerCase()==="delivered" ){
+    if (newStatus.toLowerCase() === "delivered") {
       const confirmDeliver = window.confirm(
         "Are you sure you want to mark this order as delivered? This action cannot be undone.",
       );
@@ -114,7 +126,11 @@ export default function AllOrdersPage() {
       const res = await fetch(`/api/orders?queryType=statusUpdate`, {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ orderId, statustoUpdate: newStatus ,currentStatus}),
+        body: JSON.stringify({
+          orderId,
+          statustoUpdate: newStatus,
+          currentStatus,
+        }),
       });
       if (res.ok) {
         toast.success("Order Status Updated");
@@ -125,7 +141,7 @@ export default function AllOrdersPage() {
               : o,
           ),
         );
-      }else {
+      } else {
         const data = await res.json();
         toast.error(data.message || "Failed to update status");
       }
@@ -239,7 +255,7 @@ export default function AllOrdersPage() {
             {processedOrders.map((order) => {
               let paidAmount: number = 0;
               (order.payment?.razorpay_order_id &&
-              order.payment.payment_status) === "paid"
+                order.payment.payment_status) === "paid"
                 ? (paidAmount = order.totalAmount)
                 : (paidAmount = order.payment?.paidAmount || 0);
               return (
@@ -262,9 +278,16 @@ export default function AllOrdersPage() {
                     <div className="relative inline-block w-full sm:w-auto">
                       <select
                         value={order.status}
-                        disabled={updatingId === order._id || order.status.toLowerCase() === "cancelled"}
+                        disabled={
+                          updatingId === order._id ||
+                          order.status.toLowerCase() === "cancelled"
+                        }
                         onChange={(e) =>
-                          handleStatusChange(order._id, e.target.value,order.status)
+                          handleStatusChange(
+                            order._id,
+                            e.target.value,
+                            order.status,
+                          )
                         }
                         className={`w-full sm:w-auto text-[10px] font-black py-2 px-4 rounded-lg border uppercase tracking-wider outline-none cursor-pointer transition-all appearance-none pr-10 ${
                           order.status === "delivered"
@@ -360,7 +383,7 @@ export default function AllOrdersPage() {
                                   Remaining Balance
                                 </p>
                                 <p className="text-2xl font-black tabular-nums">
-                                  ₹{order.totalAmount-paidAmount}
+                                  ₹{order.totalAmount - paidAmount}
                                 </p>
                               </div>
                               <div className="h-8 w-px bg-white/20 hidden sm:block" />{" "}
